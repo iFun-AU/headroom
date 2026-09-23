@@ -1,0 +1,3 @@
+{"type":"assistant","timestamp":"2026-08-26T10:25:31.875Z","sessionId":"00000000-0000-4000-8000-000000000001","requestId":"req_01TEST","message":{"id":"msg_01TEST","model":"claude-fable-5","usage":{"input_tokens":2,"cache_creation_input_tokens":54097,"cache_read_input_tokens":37690,"output_tokens":797,"service_tier":"standard"}}}
+{"type":"assistant","timestamp":"2026-08-26T10:25:31.875Z","sessionId":"00000000-0000-4000-8000-000000000001","requestId":"req_01TEST","message":{"id":"msg_01TEST","model":"claude-fable-5","usage":{"input_tokens":2,"cache_creation_input_tokens":54097,"cache_read_input_tokens":37690,"output_tokens":797,"service_tier":"standard"}}}
+{"type":"user","timestamp":"2026-08-26T10:25:40.000Z","message":{"role":"user","content":"hi"}}

@@ -10,6 +10,9 @@ mod merge;
 mod projection;
 mod window;
 
+/// Lenient external DTO parsers that produce strict domain values.
+pub mod parse;
+
 pub use alerts::{Alert, AlertTracker};
 pub use domain::{
     Bucket, ConnectionStatus, History, HistoryScope, LimitWindow, Percent, PercentError,

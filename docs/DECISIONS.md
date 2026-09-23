@@ -49,3 +49,11 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: make the `export_bindings` integration test export both top-level IPC graphs and normalize trailing whitespace across every generated `.ts` file using `std`; do not enable ts-rs's optional formatter feature.
 - Why: generation remains a single deterministic command and later regeneration cannot silently restore whitespace defects, without pulling a full TypeScript parser/formatter graph (57 additional packages) into the Rust dependency lock for a whitespace-only problem. This is mechanical generated-file normalization, not hand editing or a weakened check.
 - Evidence: two consecutive `cargo test -p usage-core export_bindings` runs produce identical SHA-256 lists, and the generated directory passes `git diff --check` after restaging.
+
+## D-007 Parse both Claude bridge boundary shapes (2026-09-23, phase 3)
+
+- Context: T2.3 names the persisted bridge-file format (`rateLimits`, `writtenAt`), but its required Appendix A.4 fixture is the raw Claude status-line stdin format (`rate_limits`) from which that file is produced.
+- Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail”.
+- Decision: keep one lenient parser that accepts both field names; use `writtenAt` when present and otherwise require the caller to supply the observation time used for raw fixture/probe parsing.
+- Why: the production source can parse exactly what the bridge persists, the required documented fixture remains executable, and both paths normalize into the same strict full `Reading` without another public DTO or inferred timestamp.
+- Evidence: `claude_statusline_parser` verifies Appendix A.4 and a schema-1 persisted envelope independently, including timestamp precedence and independently missing windows.

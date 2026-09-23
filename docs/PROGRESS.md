@@ -1,6 +1,6 @@
 # Progress
 
-Current: Phase 2 — M1 core domain
+Current: Phase 3 — M2 parsers
 
 ## Phase 0 — Understand and prepare
 Status: committed (4504609)
@@ -45,7 +45,7 @@ Status: committed (090fbf1)
 - None.
 
 ## Phase 2 — Core domain (M1)
-Status: review
+Status: committed (7163e95)
 
 ### Tasks
 
@@ -66,6 +66,31 @@ Status: review
 - Diff review: every M1 source and test file re-read; the highest-risk merge paths have one test per I1–I4/D1–D5 plus five named races and all 120 permutations. History never mixes sources, retains bounded state, preserves UTC account days and passes a 25-hour DST fixture. All source files stay below 400 lines after splitting time helpers and merge test groups. No I/O entered `usage-core`; no non-test unwrap/expect, unsafe, secrets, unbounded collections, contract edits, or unrelated files were introduced.
 - Decisions: D-005, D-006. The review rejected ts-rs's heavyweight formatter graph (57 packages) and retained a std-only deterministic generated-whitespace normalizer instead.
 - New handover items: none; M1 is fully fixture/pure-logic verifiable.
+
+### Blocked (hard stops only)
+
+- None.
+
+## Phase 3 — Parsers (M2)
+Status: review
+
+### Tasks
+
+- [x] T2.1 Codex app-server parser — Goal: convert lenient camelCase RPC DTOs into strict full/sparse readings while enforcing the `codex` limit-ID filter — Files: `crates/usage-core/src/parse/{mod.rs,codex_app_server.rs}`, focused tests, Appendix A.2 fixture — Acceptance: the documented response yields exactly one full Weekly 2% reading with plan `Pro`; a secondary-only notification is one-window partial; `premium` never reaches the store — Verify: red/green fixture and sparse/filter tests — Result: 4 focused tests pass; the exact Appendix A.2 response yields one full Weekly 2% `Pro` reading, sparse secondary data remains partial, and both mapped and notification `premium` snapshots are excluded; full fmt, strict workspace Clippy, and workspace tests pass.
+- [x] T2.2 Codex rollout parser — Goal: parse snake_case JSONL into full limit readings and fork-safe token deltas — Files: `crates/usage-core/src/parse/codex_rollout.rs`, focused tests, Appendix A.1/A.6 fixtures — Acceptance: A.1 yields Weekly 1% plus its delta; premium yields tokens only; legacy `resets_in_seconds` computes 1790132400; forked sessions count exactly 3000 under all four §2.2 rules — Verify: fixture-driven red/green tests — Result: 4 focused tests pass; the exact fixtures yield the documented full reading, 211,554 first-line delta, 1,790,132,400 legacy reset, and fork-safe deltas `[1000, 0, 2000]`; an added counter-reset case proves rule 3, and a `premium` case proves token events survive the limit filter; full task gates pass.
+- [x] T2.3 Claude status-line parser — Goal: convert the bridge-file envelope and lenient Claude rate-limit shape into full readings — Files: `crates/usage-core/src/parse/claude_statusline.rs`, focused tests, Appendix A.4 fixture — Acceptance: A.4 yields Session 23.5 and Weekly 41.2; an absent `five_hour` yields only Weekly — Verify: exact fixture and missing-window tests — Result: 4 focused tests pass; A.4 yields the exact Session/Weekly values, independently missing windows are omitted, empty shapes are ignored, and the parser accepts both raw `rate_limits` input and the persisted `rateLimits` envelope while honoring `writtenAt`; full task gates pass.
+- [x] T2.4 Claude local-log parser — Goal: extract assistant token events without accepting non-assistant records or losing dedupe provenance — Files: `crates/usage-core/src/parse/claude_log.rs`, focused tests, Appendix A.3 fixture — Acceptance: A.3 totals 92,586 tokens and produces `message_id:request_id`; non-assistant lines are skipped — Verify: exact fixture and negative tests — Result: 4 focused tests pass; the exact duplicate fixture emits identical 92,586-token events with `msg_01TEST:req_01TEST`, the history store counts them once, non-assistant/no-usage records are skipped, missing counters default to zero, and overflow is rejected; full task gates pass.
+
+### Phase review and commit
+
+- [x] Goal: leave M2 lenient at external boundaries and strict internally — Files: Phase 3 changes only — Acceptance: every Appendix fixture is checked in verbatim, malformed/unknown fields cannot panic, parser output observes unit/source/filter contracts, and coverage remains above the core gate — Verify: fmt, workspace clippy/tests, UI checks if bindings change, coverage, staged diff review, commit, `git log -1 --stat`, clean status — Result: all automated gates through the pre-commit review pass; commit follows this record.
+
+### Review
+
+- Checks: `cargo fmt --all -- --check` ✅ · workspace Clippy with `-D warnings` ✅ · workspace tests ✅ (17 parser-focused/robustness tests; none skipped) · `cargo llvm-cov -p usage-core --fail-under-lines 90` ✅ (95.53% lines; every provider parser ≥96%) · generated bindings unchanged ✅ · `git diff --check` ✅.
+- Diff review: all parser sources and tests re-read; every external DTO field is optional with serde defaults and unknown fields remain accepted. Appendix A.1–A.4 and A.6 files compare byte-for-byte with their documentation code blocks. Codex limit IDs are filtered before readings, token deltas remain independent of that filter and per-file state is explicit. Claude duplicates retain a stable key for store dedupe, arithmetic is checked, malformed JSON returns typed errors, and no parser performs I/O, logs secrets, panics, or exceeds 400 lines.
+- Decisions: D-007 records the raw-status-line versus persisted-bridge shape ambiguity and the additive parser behavior.
+- New handover items: none; M2 is fully fixture/pure-logic verifiable.
 
 ### Blocked (hard stops only)
 
