@@ -17,6 +17,8 @@ use usage_core::log_trunc;
 
 /// Maximum retained unterminated line size for each tracked file.
 pub const MAX_PARTIAL_LINE_BYTES: usize = 16 * 1024 * 1024;
+/// Maximum unterminated-line bytes retained across every tracked file.
+pub const MAX_TOTAL_PARTIAL_BYTES: usize = 64 * 1024 * 1024;
 const READ_CHUNK_BYTES: usize = 64 * 1024;
 const MAX_BATCH_BYTES: usize = MAX_PARTIAL_LINE_BYTES + READ_CHUNK_BYTES;
 const MAX_BATCH_LINES: usize = 4_096;
@@ -49,6 +51,8 @@ pub struct TailRead {
     pub skipped_oversized: usize,
     /// More bytes remain and should be read in another bounded call.
     pub has_more: bool,
+    /// The file was truncated or replaced, so parser state must also reset.
+    pub reset: bool,
 }
 
 /// Bounded-state diagnostics for tests and operational metrics.
@@ -105,8 +109,19 @@ impl Tailer {
             .await
             .map_err(|error| TailError::new(path, error))?;
         let identity = file_identity(&metadata);
+        let buffered_elsewhere = self
+            .files
+            .iter()
+            .filter(|(candidate, _)| candidate.as_path() != path)
+            .map(|(_, state)| state.partial.len())
+            .sum::<usize>();
+        let partial_limit = MAX_TOTAL_PARTIAL_BYTES
+            .saturating_sub(buffered_elsewhere)
+            .min(MAX_PARTIAL_LINE_BYTES);
         let state = self.files.entry(path.to_path_buf()).or_default();
-        if metadata.len() < state.offset || state.file_identity.is_some_and(|old| old != identity) {
+        let reset =
+            metadata.len() < state.offset || state.file_identity.is_some_and(|old| old != identity);
+        if reset {
             state.reset();
         }
         state.file_identity = Some(identity);
@@ -118,7 +133,10 @@ impl Tailer {
             .await
             .map_err(|error| TailError::new(path, error))?;
 
-        let mut result = TailRead::default();
+        let mut result = TailRead {
+            reset,
+            ..TailRead::default()
+        };
         let mut chunk = vec![0_u8; READ_CHUNK_BYTES].into_boxed_slice();
         let mut processed = 0_usize;
         while processed < MAX_BATCH_BYTES && result.lines.len() < MAX_BATCH_LINES {
@@ -130,7 +148,7 @@ impl Tailer {
             if read == 0 {
                 break;
             }
-            let consumed = consume_bytes(state, &chunk[..read], path, &mut result);
+            let consumed = consume_bytes(state, &chunk[..read], path, partial_limit, &mut result);
             state.offset = state.offset.saturating_add(consumed as u64);
             processed = processed.saturating_add(consumed);
             if consumed < read {
@@ -167,6 +185,11 @@ impl Tailer {
         });
         before.saturating_sub(self.files.len())
     }
+
+    /// Forgets one file when an owning source evicts its parser state.
+    pub fn forget(&mut self, path: &Path) -> bool {
+        self.files.remove(path).is_some()
+    }
 }
 
 impl TailState {
@@ -177,7 +200,13 @@ impl TailState {
     }
 }
 
-fn consume_bytes(state: &mut TailState, bytes: &[u8], path: &Path, result: &mut TailRead) -> usize {
+fn consume_bytes(
+    state: &mut TailState,
+    bytes: &[u8],
+    path: &Path,
+    partial_limit: usize,
+    result: &mut TailRead,
+) -> usize {
     for (index, &byte) in bytes.iter().enumerate() {
         if byte == b'\n' {
             if state.discarding_oversized {
@@ -186,7 +215,7 @@ fn consume_bytes(state: &mut TailState, bytes: &[u8], path: &Path, result: &mut 
                 result.lines.push(std::mem::take(&mut state.partial));
             }
         } else if !state.discarding_oversized {
-            if state.partial.len() == MAX_PARTIAL_LINE_BYTES {
+            if state.partial.len() >= partial_limit {
                 state.partial.clear();
                 state.discarding_oversized = true;
                 result.skipped_oversized = result.skipped_oversized.saturating_add(1);

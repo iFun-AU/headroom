@@ -73,3 +73,19 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: resolve explicit app Settings first, then `CODEX_HOME` / `CLAUDE_CONFIG_DIR`, then the documented home-directory defaults.
 - Why: a path the user selected in onboarding or Settings must remain effective when the GUI happens to inherit a conflicting shell environment; honoring environment variables before defaults still supports standard tool layouts without duplicating path construction elsewhere.
 - Evidence: `Paths::resolve` is the only path constructor, and its temp-root tests exercise settings > environment > default precedence without reading real user directories.
+
+## D-010 Preserve absent versus null Claude status-line state (2026-09-23, phase 6)
+
+- Context: DEVELOPMENT.md §8.3 requires `bridge-install.json` to store `previousStatusLine: <value> | null`, while also requiring uninstall to distinguish a previously absent key from every prior JSON value, including JSON `null`.
+- Rule applied: DEVELOPMENT.md §0.1 “Two document requirements conflict”.
+- Decision: retain the required `previousStatusLine` field and add `previousStatusLinePresent: bool`; uninstall removes the key only when that bit is false and otherwise restores the saved JSON value exactly.
+- Why: JSON `null` alone cannot encode both states. The additive presence bit preserves forward-readable state, makes semantic uninstall lossless, and avoids treating a legitimate user value as absence.
+- Evidence: bridge installer tests cover missing settings, arbitrary prior status-line objects, idempotent reinstallation, semantic uninstall after later edits, and byte-for-byte no-op when the command was changed by the user.
+
+## D-011 Bound the diagnostic probe and add a fixture completion condition (2026-09-23, phase 6)
+
+- Context: DEVELOPMENT.md T5.6 requires an all-source probe but does not define how it terminates, while automated tests must never inspect real Codex or Claude data.
+- Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail” and “The step needs a human”.
+- Decision: live mode runs for 30 seconds by default and accepts `--seconds N`; `--fixture` uses only a temporary root and exits when both provider readings, both token histories, the primary Codex app-server reading, and Claude bridge confirmation are all observed, or fails after five seconds.
+- Why: both modes retain one cancellation owner and a three-second join deadline, fixture verification is deterministic, and the default live command remains long enough for the documented immediate comparisons without becoming an orphaned background process.
+- Evidence: `cargo run -q -p usage-sources --example probe -- --fixture` progresses from empty state through Claude and rollout readings to an authoritative 2% fake app-server snapshot, then exits successfully; the real-data live comparison is deferred to handover.

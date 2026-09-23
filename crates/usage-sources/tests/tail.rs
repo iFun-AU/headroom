@@ -72,6 +72,7 @@ async fn truncation_resets_offset_and_reads_replacement_content() {
         .read_new(&path)
         .await
         .expect("replacement read should work");
+    assert!(replacement.reset);
     assert_eq!(replacement.lines, vec![b"new".to_vec()]);
 }
 
@@ -107,6 +108,22 @@ async fn stale_file_state_is_forgotten_after_eight_days() {
     let future = SystemTime::now() + Duration::from_hours(216);
     assert_eq!(tailer.prune_stale(future), 1);
     assert_eq!(tailer.metrics().tracked_files, 0);
+}
+
+#[tokio::test]
+async fn explicit_forget_releases_one_files_buffer_and_offset() {
+    let directory = tempdir().expect("tempdir should be created");
+    let path = directory.path().join("rollout.jsonl");
+    tokio::fs::write(&path, b"one\npartial")
+        .await
+        .expect("fixture should be written");
+    let mut tailer = Tailer::new();
+    tailer.read_new(&path).await.expect("read should work");
+
+    assert!(tailer.forget(&path));
+    assert_eq!(tailer.metrics().tracked_files, 0);
+    assert_eq!(tailer.metrics().buffered_bytes, 0);
+    assert!(!tailer.forget(&path));
 }
 
 #[tokio::test]

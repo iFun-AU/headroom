@@ -3,7 +3,12 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 mod event;
+mod recent;
 
+/// Claude Code source and bridge integration.
+pub mod claude;
+/// Codex CLI source implementations.
+pub mod codex;
 /// Centralized filesystem path derivation.
 pub mod paths;
 /// Activity-aware polling scheduler.

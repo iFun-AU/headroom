@@ -3,7 +3,7 @@ use serde::Deserialize;
 use super::{Error, Result, display_plan, parse_timestamp};
 use crate::{
     LimitWindow, Percent, Provider, Reading, SourceKind, TokenCount, TokenEvent, UnixSeconds,
-    classify,
+    classify, log_trunc,
 };
 
 const EVENT_MESSAGE_TYPE: &str = "event_msg";
@@ -66,6 +66,8 @@ pub struct CodexRolloutLine {
     pub reading: Option<Reading>,
     /// Fork-safe token delta when the line contains token usage information.
     pub token: Option<TokenEvent>,
+    /// Bounded non-Codex limit ID ignored by the reading parser, for diagnostics.
+    pub filtered_limit_id: Option<String>,
 }
 
 /// Stateful parser for one Codex rollout file.
@@ -113,6 +115,12 @@ impl CodexRolloutParser {
             .as_deref()
             .ok_or(Error::MissingField("timestamp"))?;
         let observed_at = parse_timestamp(timestamp)?;
+        let filtered_limit_id = payload
+            .rate_limits
+            .as_ref()
+            .and_then(|limits| limits.limit_id.as_deref())
+            .filter(|limit_id| *limit_id != CODEX_LIMIT_ID)
+            .map(|limit_id| log_trunc(limit_id).into_owned());
 
         Ok(CodexRolloutLine {
             reading: payload
@@ -125,6 +133,7 @@ impl CodexRolloutParser {
                 .info
                 .as_ref()
                 .and_then(|info| self.token_from_info(info, observed_at)),
+            filtered_limit_id,
         })
     }
 

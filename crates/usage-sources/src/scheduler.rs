@@ -279,7 +279,7 @@ impl SchedulerActor {
                 let _ = reply.send(self.deadline(source, now));
             }
             Command::Started { source, at, reply } => {
-                let accepted = self.deadline(source, now) <= at;
+                let accepted = self.deadline(source, now) <= now;
                 if accepted && let Some(schedule) = self.schedules.get_mut(&source) {
                     schedule.last_read = Some(at);
                     schedule.triggered_at = None;

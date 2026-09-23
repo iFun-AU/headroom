@@ -32,6 +32,7 @@ fn documented_fixture_yields_limits_tokens_and_legacy_reset() {
 
     assert!(lines[1].reading.is_none());
     assert!(lines[1].token.is_none());
+    assert_eq!(lines[1].filtered_limit_id.as_deref(), Some("premium"));
 
     let legacy = lines[2]
         .reading
