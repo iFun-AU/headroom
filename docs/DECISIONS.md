@@ -33,3 +33,19 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: keep an empty, off-by-default `claude-oauth` Cargo feature for future compatibility, but compile no OAuth, Keychain, `reqwest`, or `security-framework` implementation in v1.
 - Why: the documented status-line bridge provides the consent-based v1 path without relying on an unstable endpoint or touching credentials.
 - Evidence: `crates/usage-sources/Cargo.toml` defines `default = []` and `claude-oauth = []`; the v1 dependency graph contains neither network nor Keychain crates from our source crate.
+
+## D-005 Add checked numeric conversion and DST-only test dependencies (2026-09-23, phase 2)
+
+- Context: weekly projection converts a bounded floating-point duration into Unix seconds, while T1.5 explicitly requires a deterministic `America/New_York` DST-transition test. Neither conversion support nor an IANA timezone database is in the §4 direct-dependency table.
+- Rule applied: DEVELOPMENT.md §0.1 “A dependency seems necessary”.
+- Decision: add `num-traits` 0.2 as a direct `usage-core` dependency for checked `f64`→`i64` conversion and `chrono-tz` 0.10 as a test-only dependency.
+- Why: `num-traits` is already a maintained transitive dependency of the mandated `chrono` crate and avoids a lossy `as` cast or panic-prone conversion; `chrono-tz` is isolated to tests and is the fixture-independent way to exercise the mandated 25-hour day. Neither adds network, cryptography, I/O, or unsafe code to this project.
+- Evidence: `project_weekly` uses `ToPrimitive::to_i64`; the T1.5 test verifies 25 hourly events aggregate into 2026-11-01 in `America/New_York`; the dependency graph remains local-only.
+
+## D-006 Normalize generated TypeScript without a formatter dependency (2026-09-23, phase 2)
+
+- Context: the default ts-rs 12 renderer leaves trailing spaces around documented object fields, so reproducible generated bindings failed `git diff --check` even though TypeScript and ESLint accepted them.
+- Rule applied: DEVELOPMENT.md §§0.1 “A dependency seems necessary” and 6.2 generated IPC bindings.
+- Decision: make the `export_bindings` integration test export both top-level IPC graphs and normalize trailing whitespace across every generated `.ts` file using `std`; do not enable ts-rs's optional formatter feature.
+- Why: generation remains a single deterministic command and later regeneration cannot silently restore whitespace defects, without pulling a full TypeScript parser/formatter graph (57 additional packages) into the Rust dependency lock for a whitespace-only problem. This is mechanical generated-file normalization, not hand editing or a weakened check.
+- Evidence: two consecutive `cargo test -p usage-core export_bindings` runs produce identical SHA-256 lists, and the generated directory passes `git diff --check` after restaging.

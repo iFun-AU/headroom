@@ -4,5 +4,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+chrono = { version = "0.4.42", features = ["serde"] }
+num-traits = "0.2.19"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
+ts-rs = { version = "12.0.1", features = ["no-serde-warnings", "serde-compat"] }
+
+[dev-dependencies]
+chrono-tz = "0.10.4"
+
 [lints]
 workspace = true

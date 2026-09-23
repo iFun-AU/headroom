@@ -1,6 +1,6 @@
 # Progress
 
-Current: Phase 1 — review
+Current: Phase 2 — M1 core domain
 
 ## Phase 0 — Understand and prepare
 Status: committed (4504609)
@@ -25,7 +25,7 @@ Status: committed (4504609)
 - None.
 
 ## Phase 1 — Scaffold (M0)
-Status: review
+Status: committed (090fbf1)
 
 ### Tasks
 
@@ -39,6 +39,33 @@ Status: review
 - Diff review: all scaffold files read in full; generated dependency locks retained; generated schemas, sidecars, dependencies and build output ignored; no contract/design edits; no forbidden Rust constructs, secrets, unbounded resources or unrelated changes. Fixed root release-profile placement, added build-script docs, corrected Tauri command working directories, and scoped type-aware ESLint to TS modules.
 - Decisions: D-002, D-003, D-004 · ⚠ VERIFY: none in M0
 - New handover items: none; native debug-window inventory limitation is a development-tooling observation, not an acceptance blocker
+
+### Blocked (hard stops only)
+
+- None.
+
+## Phase 2 — Core domain (M1)
+Status: review
+
+### Tasks
+
+- [x] T1.1 Domain types and bounded logging — Goal: implement the strict, documented §7.1 domain model, validated unit newtypes, and UTF-8-safe external-text truncation — Files: `crates/usage-core/src/{lib.rs,domain.rs}` plus focused tests — Acceptance: `Percent` rejects non-finite input and clamps finite values; all IPC fields follow the prescribed JSON/TypeScript representations; `log_trunc` returns at most 2 KiB without splitting a character — Verify: red/green unit tests for NaN, infinities, 120, −1, short text, ASCII boundary, and multibyte boundary — Result: 5 focused tests pass; T1.1 clippy is warning-free.
+- [x] T1.2 Window classification — Goal: implement the pure duration classifier — Files: `crates/usage-core/src/window.rs` plus focused tests — Acceptance: session, weekly, other, absent/hinted, negative, and oversized durations follow §7.2 without lossy casts — Verify: 5 boundary-focused tests pass.
+- [x] T1.3 TypeScript bindings — Goal: generate reproducible `ts-rs` exports for every IPC type — Files: `ui/src/bindings/**` plus export contract test — Acceptance: every IPC type is exported; 64-bit JSON values use TypeScript `number` — Verify: `cargo test -p usage-core export_bindings` runs 17 export tests; `UnixSeconds.ts` contains `number` and no `bigint`.
+- [x] T1.4 Source-state merge — Goal: implement §7.4 ingest and derive semantics without I/O — Files: `crates/usage-core/src/merge.rs` and its tests — Acceptance: rules I1–I4 and D1–D5, races (a)–(e), deterministic source selection, rollover/refinement/reset handling, and at least five-event permutation invariance are covered — Verify: 15 named tests pass, including every rule, all required races, and all 120 orderings of five full-reading events; focused clippy is warning-free.
+- [x] T1.5 History — Goal: aggregate bounded per-source token history and produce correctly scoped 24-hour/7-day views — Files: `crates/usage-core/src/history.rs` and its tests — Acceptance: exact zero-filled series, source isolation, Codex account/fallback selection, UTC account days, dedupe, 8-day pruning, and DST behavior match §7.5 — Verify: 7 deterministic tests pass, including the 25-hour `America/New_York` day on 2026-11-01; storage metrics prove hour/dedupe pruning; focused clippy is warning-free.
+- [x] T1.6 Projection and alerts — Goal: implement weekly pace projection and stateful threshold/reset alerts — Files: `crates/usage-core/src/{projection.rs,alerts.rs}` and tests — Acceptance: projection depends only on weekly percentage/timing; alerts fire only on upward crossings, dedupe per reset, re-arm after reset, and prune expired state — Verify: 5 focused tests pass for weekly-only projection, six-hour suppression, upward/downward transitions, reset re-arming, reset notification, and bounded firing state; focused clippy is warning-free.
+
+### Phase review and commit
+
+- [x] Goal: leave M1 clean, documented, generated, and warning-free — Files: Phase 2 changes only — Acceptance: all M1 acceptance criteria pass; no forbidden constructs or unrelated edits; coverage meets the project gate — Verify: fmt, clippy, workspace tests, binding diff check, UI checks, coverage measurement, staged diff review, commit, `git log -1 --stat`, clean status — Result: all automated gates through the pre-commit review pass; commit follows this record.
+
+### Review
+
+- Checks: `cargo fmt --all -- --check` ✅ · workspace clippy with `-D warnings` ✅ · workspace tests ✅ (58 `usage-core` tests, none skipped) · `cargo llvm-cov -p usage-core --fail-under-lines 90` ✅ (95.89% lines; domain/window/projection 100%, merge 97.19%) · generated-binding SHA-256 regeneration check ✅ · UI typecheck/lint/build ✅ · `git diff --cached --check` ✅.
+- Diff review: every M1 source and test file re-read; the highest-risk merge paths have one test per I1–I4/D1–D5 plus five named races and all 120 permutations. History never mixes sources, retains bounded state, preserves UTC account days and passes a 25-hour DST fixture. All source files stay below 400 lines after splitting time helpers and merge test groups. No I/O entered `usage-core`; no non-test unwrap/expect, unsafe, secrets, unbounded collections, contract edits, or unrelated files were introduced.
+- Decisions: D-005, D-006. The review rejected ts-rs's heavyweight formatter graph (57 packages) and retained a std-only deterministic generated-whitespace normalizer instead.
+- New handover items: none; M1 is fully fixture/pure-logic verifiable.
 
 ### Blocked (hard stops only)
 
