@@ -5,8 +5,9 @@ use tokio::sync::{mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 use usage_core::{
-    Alert, AlertTracker, History, HistoryStore, Provider, State, UnixSeconds, UsageSnapshot,
-    WindowKind, WindowMinutes, derive_snapshot, ingest_reading, ingest_status, project_weekly,
+    Alert, AlertKind, AlertTracker, History, HistoryStore, Provider, State, UnixSeconds,
+    UsageSnapshot, WindowKind, WindowMinutes, derive_snapshot, ingest_reading, ingest_status,
+    project_weekly,
 };
 
 use crate::{SourceEvent, scheduler::Scheduler};
@@ -37,18 +38,25 @@ pub struct StoreHandle {
 }
 
 impl StoreHandle {
+    /// Separates the cloneable command/snapshot client from the single alert receiver.
+    #[must_use]
+    pub fn split(self) -> (StoreClient, mpsc::Receiver<Alert>) {
+        (
+            StoreClient {
+                snapshot: self.snapshot,
+                commands: self.commands,
+            },
+            self.alerts,
+        )
+    }
+
     /// Requests the latest derived history for one provider.
     ///
     /// # Errors
     ///
     /// Returns [`StoreError::Closed`] if the actor has stopped.
     pub async fn history(&self, provider: Provider) -> Result<History, StoreError> {
-        let (reply, response) = oneshot::channel();
-        self.commands
-            .send(StoreCommand::GetHistory(provider, reply))
-            .await
-            .map_err(|_| StoreError::Closed)?;
-        response.await.map_err(|_| StoreError::Closed)
+        get_history(&self.commands, provider).await
     }
 
     /// Requests an immediate snapshot re-derivation.
@@ -57,16 +65,104 @@ impl StoreHandle {
     ///
     /// Returns [`StoreError::Closed`] if the actor has stopped.
     pub async fn refresh_now(&self) -> Result<(), StoreError> {
-        self.commands
-            .send(StoreCommand::RefreshNow)
-            .await
-            .map_err(|_| StoreError::Closed)
+        refresh(&self.commands).await
+    }
+
+    /// Replaces notification thresholds and reset preference.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Closed`] if the actor has stopped.
+    pub async fn update_alert_settings(
+        &self,
+        thresholds: Vec<u8>,
+        notify_on_reset: bool,
+    ) -> Result<(), StoreError> {
+        update_alert_settings(&self.commands, thresholds, notify_on_reset).await
+    }
+}
+
+/// Cloneable UI/backend client after the alert receiver has one owner.
+#[derive(Clone)]
+pub struct StoreClient {
+    /// Latest derived snapshot.
+    pub snapshot: watch::Receiver<Arc<UsageSnapshot>>,
+    commands: mpsc::Sender<StoreCommand>,
+}
+
+impl StoreClient {
+    /// Requests the latest derived history for one provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Closed`] if the actor has stopped.
+    pub async fn history(&self, provider: Provider) -> Result<History, StoreError> {
+        get_history(&self.commands, provider).await
+    }
+
+    /// Requests an immediate snapshot re-derivation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Closed`] if the actor has stopped.
+    pub async fn refresh_now(&self) -> Result<(), StoreError> {
+        refresh(&self.commands).await
+    }
+
+    /// Replaces notification thresholds and reset preference.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Closed`] if the actor has stopped.
+    pub async fn update_alert_settings(
+        &self,
+        thresholds: Vec<u8>,
+        notify_on_reset: bool,
+    ) -> Result<(), StoreError> {
+        update_alert_settings(&self.commands, thresholds, notify_on_reset).await
     }
 }
 
 enum StoreCommand {
     GetHistory(Provider, oneshot::Sender<History>),
     RefreshNow,
+    UpdateAlertSettings {
+        thresholds: Vec<u8>,
+        notify_on_reset: bool,
+    },
+}
+
+async fn get_history(
+    commands: &mpsc::Sender<StoreCommand>,
+    provider: Provider,
+) -> Result<History, StoreError> {
+    let (reply, response) = oneshot::channel();
+    commands
+        .send(StoreCommand::GetHistory(provider, reply))
+        .await
+        .map_err(|_| StoreError::Closed)?;
+    response.await.map_err(|_| StoreError::Closed)
+}
+
+async fn refresh(commands: &mpsc::Sender<StoreCommand>) -> Result<(), StoreError> {
+    commands
+        .send(StoreCommand::RefreshNow)
+        .await
+        .map_err(|_| StoreError::Closed)
+}
+
+async fn update_alert_settings(
+    commands: &mpsc::Sender<StoreCommand>,
+    thresholds: Vec<u8>,
+    notify_on_reset: bool,
+) -> Result<(), StoreError> {
+    commands
+        .send(StoreCommand::UpdateAlertSettings {
+            thresholds,
+            notify_on_reset,
+        })
+        .await
+        .map_err(|_| StoreError::Closed)
 }
 
 /// Single-owner actor for source state, token history, and alert transitions.
@@ -75,6 +171,7 @@ pub struct UsageStore {
     history: HistoryStore,
     alert_tracker: AlertTracker,
     thresholds: Vec<u8>,
+    notify_on_reset: bool,
     events: mpsc::Receiver<SourceEvent>,
     commands: mpsc::Receiver<StoreCommand>,
     snapshot: watch::Sender<Arc<UsageSnapshot>>,
@@ -118,6 +215,7 @@ impl UsageStore {
             history: HistoryStore::new(),
             alert_tracker: AlertTracker::new(),
             thresholds,
+            notify_on_reset: true,
             events,
             commands,
             snapshot,
@@ -193,6 +291,13 @@ impl UsageStore {
                 self.trigger_scheduled_refresh();
                 self.publish(unix_now());
             }
+            StoreCommand::UpdateAlertSettings {
+                thresholds,
+                notify_on_reset,
+            } => {
+                self.thresholds = thresholds;
+                self.notify_on_reset = notify_on_reset;
+            }
         }
     }
 
@@ -232,7 +337,12 @@ impl UsageStore {
         }
         drop(current);
 
-        for alert in self.alert_tracker.evaluate(&next, &self.thresholds, now) {
+        for alert in self
+            .alert_tracker
+            .evaluate(&next, &self.thresholds, now)
+            .into_iter()
+            .filter(|alert| self.notify_on_reset || alert.kind != AlertKind::Reset)
+        {
             match self.alerts.try_send(alert) {
                 Ok(()) | Err(mpsc::error::TrySendError::Closed(_)) => {}
                 Err(mpsc::error::TrySendError::Full(alert)) => {

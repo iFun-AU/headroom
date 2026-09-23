@@ -337,3 +337,42 @@ async fn uninstall_distinguishes_explicit_null_from_an_absent_key() {
         json!({ "statusLine": null, "theme": "dark" })
     );
 }
+
+#[tokio::test]
+async fn inspection_reports_only_an_active_semantic_installation() {
+    let fixture = Fixture::new();
+    fixture.write_settings(br#"{"statusLine":{"type":"command","command":"x.sh"}}"#);
+
+    let before = fixture
+        .installer
+        .inspect()
+        .await
+        .expect("missing state should inspect cleanly");
+    assert!(!before.installed);
+    assert!(!before.chained);
+    assert_eq!(before.installed_at, None);
+
+    fixture
+        .installer
+        .install_at(INSTALLED_AT)
+        .await
+        .expect("installation should succeed");
+    let installed = fixture
+        .installer
+        .inspect()
+        .await
+        .expect("installation should inspect");
+    assert!(installed.installed);
+    assert!(installed.chained);
+    assert_eq!(installed.installed_at, Some(INSTALLED_AT));
+
+    fixture.write_settings(br#"{"statusLine":{"type":"command","command":"changed-by-user.sh"}}"#);
+    let overridden = fixture
+        .installer
+        .inspect()
+        .await
+        .expect("changed settings should inspect");
+    assert!(!overridden.installed);
+    assert!(!overridden.chained);
+    assert_eq!(overridden.installed_at, None);
+}

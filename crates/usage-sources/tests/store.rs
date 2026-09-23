@@ -126,6 +126,94 @@ async fn cancellation_ends_an_idle_actor_within_one_hundred_milliseconds() {
         .expect("store task should not panic");
 }
 
+#[tokio::test]
+async fn split_handle_keeps_commands_and_alerts_independently_owned() {
+    let now = unix_now();
+    let (events, handle, actor) = UsageStore::channel(vec![75]);
+    let (mut client, mut alerts) = handle.split();
+    let cancel = CancellationToken::new();
+    let mut tasks = JoinSet::new();
+    tasks.spawn(actor.run(cancel.child_token()));
+
+    events
+        .send(SourceEvent::Reading(reading(70.0, now)))
+        .await
+        .expect("baseline should send");
+    client
+        .snapshot
+        .changed()
+        .await
+        .expect("baseline snapshot should publish");
+    events
+        .send(SourceEvent::Reading(reading(80.0, UnixSeconds(now.0 + 1))))
+        .await
+        .expect("crossing should send");
+    client
+        .snapshot
+        .changed()
+        .await
+        .expect("crossing snapshot should publish");
+
+    client
+        .refresh_now()
+        .await
+        .expect("split client should retain commands");
+    assert_eq!(
+        timeout(Duration::from_millis(100), alerts.recv())
+            .await
+            .expect("split alerts should arrive")
+            .expect("alert sender should remain open")
+            .title,
+        "Claude weekly limit at 75%"
+    );
+
+    cancel.cancel();
+    tasks.join_all().await;
+}
+
+#[tokio::test]
+async fn updated_alert_preferences_suppress_reset_notifications() {
+    let now = unix_now();
+    let (events, handle, actor) = UsageStore::channel(vec![75]);
+    let (mut client, mut alerts) = handle.split();
+    let cancel = CancellationToken::new();
+    let mut tasks = JoinSet::new();
+    tasks.spawn(actor.run(cancel.child_token()));
+    client
+        .update_alert_settings(vec![90], false)
+        .await
+        .expect("alert preferences should update");
+
+    events
+        .send(SourceEvent::Reading(reading(95.0, now)))
+        .await
+        .expect("baseline should send");
+    client
+        .snapshot
+        .changed()
+        .await
+        .expect("baseline should publish");
+    let mut reset = reading(0.0, UnixSeconds(now.0 + 1));
+    reset.windows[0].resets_at = Some(UnixSeconds(now.0 + 700_000));
+    events
+        .send(SourceEvent::Reading(reset))
+        .await
+        .expect("reset should send");
+    client
+        .snapshot
+        .changed()
+        .await
+        .expect("reset should publish");
+
+    assert!(
+        timeout(Duration::from_millis(20), alerts.recv())
+            .await
+            .is_err()
+    );
+    cancel.cancel();
+    tasks.join_all().await;
+}
+
 #[tokio::test(start_paused = true)]
 async fn activity_events_reach_the_scheduler_without_shared_mutable_state() {
     let (scheduler, scheduler_actor) = Scheduler::channel_with_seed(SchedulerConfig::default(), 29);

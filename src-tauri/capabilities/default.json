@@ -5,6 +5,10 @@
   "windows": ["main", "popover", "widget"],
   "permissions": [
     "core:default",
-    "core:window:allow-start-dragging"
+    "core:window:allow-start-dragging",
+    "liquid-glass:default",
+    "notification:default",
+    "autostart:default",
+    "positioner:default"
   ]
 }

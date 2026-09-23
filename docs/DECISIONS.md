@@ -89,3 +89,27 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: live mode runs for 30 seconds by default and accepts `--seconds N`; `--fixture` uses only a temporary root and exits when both provider readings, both token histories, the primary Codex app-server reading, and Claude bridge confirmation are all observed, or fails after five seconds.
 - Why: both modes retain one cancellation owner and a three-second join deadline, fixture verification is deterministic, and the default live command remains long enough for the documented immediate comparisons without becoming an orphaned background process.
 - Evidence: `cargo run -q -p usage-sources --example probe -- --fixture` progresses from empty state through Claude and rollout readings to an authoritative 2% fake app-server snapshot, then exits successfully; the real-data live comparison is deferred to handover.
+
+## D-012 Serialize shared settings as camelCase and accept snake_case aliases (2026-09-23, phase 7)
+
+- Context: DEVELOPMENT.md §9.3 names Rust settings fields in snake_case, while §10.3 exposes the same struct to TypeScript and explicitly names wrapper fields such as `readOnly` in camelCase; the on-disk spelling is not stated.
+- Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail”.
+- Decision: serialize the shared Settings/SettingsState IPC and JSON representation as camelCase, while accepting documented snake_case aliases during load and recognizing either `schemaVersion` or `schema_version`.
+- Why: this follows the existing domain IPC convention and produces idiomatic generated TypeScript without making older or hand-authored settings brittle. Every successful load rewrites one canonical current-schema form.
+- Evidence: T6.1 migration tests cover a versionless document, generated TypeScript exposes camelCase fields, and `schema_version` aliases are declared on every multiword setting.
+
+## D-013 Reuse tempfile for atomic shell settings writes (2026-09-23, phase 7)
+
+- Context: DEVELOPMENT.md §9.3 requires atomic settings writes, but §4.1 lists `tempfile` directly for the bridge and sources rather than explicitly for `src-tauri`.
+- Rule applied: DEVELOPMENT.md §0.1 “A dependency seems necessary”.
+- Decision: add the already pinned `tempfile` 3.23 runtime crate to `src-tauri` and use `NamedTempFile::new_in`, file sync, atomic persist, and parent-directory sync for settings.
+- Why: reusing the workspace's maintained same-directory atomic-write primitive avoids collision-prone custom temporary names and adds no new package family, network access, cryptography, or project unsafe code.
+- Evidence: the T6.1 suite exercises missing, migrated, corrupt, future-version, clamped, save, and reset paths entirely in temporary directories; the workspace dependency lock reuses the existing tempfile version.
+
+## D-014 Restart one bounded source generation when source settings change (2026-09-23, phase 7)
+
+- Context: DEVELOPMENT.md requires path, Codex executable, and Claude bridge settings to take effect without defining how already-running filesystem watchers and child processes are reconfigured.
+- Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail”.
+- Decision: own all four concrete sources under one cancellable source generation; replace that generation when a source input (`codex_path`, `codex_home`, `claude_dir`, the future OAuth toggle) or the bridge installation timestamp changes, while keeping the store, scheduler, settings, and effectiveness actors alive.
+- Why: paths and process discovery are immutable inputs to individual source loops. A bounded cancel-and-join restart applies them consistently, prevents split generations from observing different settings, and leaves accumulated store/history state intact. It is simpler and safer than teaching each watcher and process a separate reconfiguration protocol.
+- Evidence: `SourceSupervisor` derives every generation from the latest validated settings, ignores display/alert/onboarding changes, cancels and joins the prior generation before a relevant replacement, and the runtime owns the supervisor under the same three-second shutdown boundary as every other actor.

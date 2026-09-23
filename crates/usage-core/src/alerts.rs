@@ -16,10 +16,21 @@ struct PreviousWindow {
 /// A user-facing notification request produced by core transition logic.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Alert {
+    /// Transition category used by notification preferences.
+    pub kind: AlertKind,
     /// Notification title.
     pub title: String,
     /// Short notification body.
     pub body: String,
+}
+
+/// Notification transition category.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlertKind {
+    /// A configured usage threshold was crossed upward.
+    Threshold,
+    /// A heavily used window rolled over to a later reset.
+    Reset,
 }
 
 /// Stateful upward-crossing and reset-alert detector.
@@ -100,6 +111,7 @@ impl AlertTracker {
         let firing = (key.0, key.1, 0, current.resets_at);
         if self.fired.insert(firing) {
             alerts.push(Alert {
+                kind: AlertKind::Reset,
                 title: format!(
                     "{} {} limit reset",
                     provider_label(key.0),
@@ -127,6 +139,7 @@ impl AlertTracker {
             let firing = (key.0, key.1, *threshold, current.resets_at);
             if self.fired.insert(firing) {
                 alerts.push(Alert {
+                    kind: AlertKind::Threshold,
                     title: format!(
                         "{} {} limit at {}%",
                         provider_label(key.0),

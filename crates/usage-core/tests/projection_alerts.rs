@@ -3,8 +3,8 @@
 #![allow(clippy::expect_used, clippy::float_cmp)]
 
 use usage_core::{
-    AlertTracker, ConnectionStatus, LimitWindow, Percent, Provider, ProviderUsage, SourceKind,
-    UnixSeconds, UsageSnapshot, WindowKind, WindowMinutes, project_weekly,
+    AlertKind, AlertTracker, ConnectionStatus, LimitWindow, Percent, Provider, ProviderUsage,
+    SourceKind, UnixSeconds, UsageSnapshot, WindowKind, WindowMinutes, project_weekly,
 };
 
 fn percent(value: f64) -> Percent {
@@ -140,6 +140,7 @@ fn upward_threshold_crossing_fires_once() {
     );
     let alerts = tracker.evaluate(&crossed, &[75], UnixSeconds(110));
     assert_eq!(alerts.len(), 1);
+    assert_eq!(alerts[0].kind, AlertKind::Threshold);
     assert_eq!(alerts[0].title, "Claude session limit at 75%");
 
     let higher = snapshot(
@@ -207,6 +208,7 @@ fn same_threshold_can_fire_again_after_a_reset() {
     );
     let reset_alerts = tracker.evaluate(&after_reset, &[75], UnixSeconds(120));
     assert_eq!(reset_alerts.len(), 1);
+    assert_eq!(reset_alerts[0].kind, AlertKind::Reset);
     assert_eq!(reset_alerts[0].title, "Claude session limit reset");
     assert_eq!(
         tracker

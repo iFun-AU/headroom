@@ -178,6 +178,44 @@ async fn stale_visible_ui_triggers_and_cancellation_is_prompt() {
         .expect("scheduler task should not panic");
 }
 
+#[tokio::test(start_paused = true)]
+async fn validated_settings_can_replace_active_and_idle_intervals() {
+    let (scheduler, actor) = Scheduler::channel_with_seed(SchedulerConfig::default(), 31);
+    let cancel = CancellationToken::new();
+    let task = tokio::spawn(actor.run(cancel.child_token()));
+    let first = scheduler
+        .next_due(SourceKind::CodexAppServer)
+        .await
+        .expect("initial read should be due");
+    scheduler
+        .record_success(SourceKind::CodexAppServer)
+        .expect("success should be accepted");
+
+    let config = SchedulerConfig {
+        codex_active: Duration::from_secs(61),
+        idle: Duration::from_secs(121),
+        ..SchedulerConfig::default()
+    };
+    scheduler
+        .update_config(config)
+        .await
+        .expect("configuration should be accepted");
+    scheduler
+        .record_activity(Provider::Codex)
+        .expect("activity should be accepted");
+    assert_eq!(
+        scheduler
+            .scheduled_for(SourceKind::CodexAppServer)
+            .await
+            .expect("updated active schedule should be available")
+            .duration_since(first),
+        Duration::from_secs(61)
+    );
+
+    cancel.cancel();
+    task.await.expect("scheduler task should not panic");
+}
+
 #[test]
 fn wake_detector_flags_wall_and_monotonic_drift_over_sixty_seconds() {
     let monotonic = Instant::now();

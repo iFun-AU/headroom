@@ -80,6 +80,17 @@ pub struct InstallReceipt {
     pub installed_at: UnixSeconds,
 }
 
+/// Read-only semantic installation state for Settings diagnostics.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BridgeInspection {
+    /// Whether Claude settings currently invoke our installed command.
+    pub installed: bool,
+    /// Whether that active installation chains an earlier user command.
+    pub chained: bool,
+    /// Installation epoch used by the effectiveness tracker.
+    pub installed_at: Option<UnixSeconds>,
+}
+
 /// Semantic uninstall result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UninstallOutcome {
@@ -216,6 +227,16 @@ impl BridgeInstaller {
         .await?
     }
 
+    /// Inspects installer state and Claude settings without modifying either.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed validation, filesystem, or worker error.
+    pub async fn inspect(&self) -> Result<BridgeInspection, BridgeInstallError> {
+        let config = self.config.clone();
+        tokio::task::spawn_blocking(move || inspect_sync(&config)).await?
+    }
+
     /// Semantically restores the saved prior status line.
     ///
     /// # Errors
@@ -309,6 +330,35 @@ fn install_sync(
         chained_previous_command: chained.is_some(),
         binary_updated,
         installed_at,
+    })
+}
+
+fn inspect_sync(config: &BridgeInstallConfig) -> Result<BridgeInspection, BridgeInstallError> {
+    let Some(state_value) = read_value(&config.install_state)? else {
+        return Ok(BridgeInspection::default());
+    };
+    let state: InstallState =
+        serde_json::from_value(state_value).map_err(|_| BridgeInstallError::InvalidState)?;
+    let Some(settings) = read_object(&config.claude_settings, false)? else {
+        return Ok(BridgeInspection::default());
+    };
+    let ours = bridge_command(&config.installed_binary)?;
+    if current_status_command(&settings.value) != Some(ours.as_str()) {
+        return Ok(BridgeInspection::default());
+    }
+    let chained = read_object(&config.bridge_config, false)?
+        .and_then(|config| {
+            config
+                .value
+                .get("chainedCommand")
+                .and_then(Value::as_str)
+                .map(|_| true)
+        })
+        .unwrap_or(false);
+    Ok(BridgeInspection {
+        installed: true,
+        chained,
+        installed_at: Some(UnixSeconds(state.installed_at)),
     })
 }
 

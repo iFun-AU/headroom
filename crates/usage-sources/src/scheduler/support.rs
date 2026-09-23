@@ -77,6 +77,7 @@ impl SourceSchedule {
 }
 
 pub(super) enum Command {
+    UpdateConfig(SchedulerConfig),
     Query {
         source: SourceKind,
         reply: oneshot::Sender<Instant>,

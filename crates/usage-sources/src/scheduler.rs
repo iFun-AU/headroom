@@ -138,6 +138,18 @@ impl Scheduler {
         })
     }
 
+    /// Replaces interval policy after validated settings change.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bounded queue is full or the actor has stopped.
+    pub async fn update_config(&self, config: SchedulerConfig) -> Result<(), SchedulerError> {
+        self.commands
+            .send(Command::UpdateConfig(config))
+            .await
+            .map_err(|_| SchedulerError::Closed)
+    }
+
     /// Clears failure backoff and marks this source's data fresh.
     ///
     /// # Errors
@@ -275,6 +287,9 @@ impl SchedulerActor {
 
     fn handle(&mut self, command: Command, now: Instant) {
         match command {
+            Command::UpdateConfig(config) => {
+                self.config = config;
+            }
             Command::Query { source, reply } => {
                 let _ = reply.send(self.deadline(source, now));
             }

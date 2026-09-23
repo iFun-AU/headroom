@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
+use ts_rs::TS;
 use usage_core::UnixSeconds;
 
 const COMMAND_CAPACITY: usize = 32;
@@ -15,8 +16,9 @@ const OVERRIDE_EVIDENCE_DELAY: Duration = Duration::from_mins(10);
 pub const LIKELY_OVERRIDDEN_HINT: &str = "No updates received from Claude Code. A project or organization setting may override your status line, or your plan doesn't report limits.";
 
 /// Behavioral confidence that Claude Code is invoking the installed bridge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum Effectiveness {
     /// Installed, but neither positive nor negative runtime evidence exists.
     Unverified,
