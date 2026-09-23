@@ -1,6 +1,6 @@
 # Progress
 
-Current: Phase 4 — M3 status-line bridge
+Current: Phase 5 — M4 I/O infrastructure
 
 ## Phase 0 — Understand and prepare
 Status: committed (4504609)
@@ -97,7 +97,7 @@ Status: committed (bf538a9)
 - None.
 
 ## Phase 4 — Status-line bridge (M3)
-Status: review
+Status: committed (c0ccd5b)
 
 ### Tasks
 
@@ -115,6 +115,31 @@ Status: review
 - Diff review: every M3 source/test file re-read; stdin is capped at 4 MiB, rate limits are copied semantically unchanged into a unique same-directory temp file, `sync_all` precedes atomic persistence, startup cleanup targets only hour-old `.tmp*` regular files, and all verification paths use tempdirs. Review caught and fixed an unbounded chained-stdout `Vec` and shell-only timeout: stdout now spools to an anonymous temp file, and the whole isolated process group is killed/reaped before the 2.3 s ceiling. No async runtime, panic/unwrap/unsafe in production, real user-data access, secret output, leaked child, or file over 400 lines remains.
 - Decisions: D-008 resolves the broad `dirs` table versus M3's explicit two-dependency rule in favor of the task-specific contract.
 - New handover items: none; native installer consent and real Claude effectiveness remain later M5/manual acceptance work, not M3 bridge gaps.
+
+### Blocked (hard stops only)
+
+- None.
+
+## Phase 5 — I/O infrastructure (M4)
+Status: committed
+
+### Tasks
+
+- [x] T4.1 Paths, events, and store actor — Goal: centralize all derived filesystem paths and route bounded source events through the sole mutable usage/history owner — Files: `crates/usage-sources/{Cargo.toml,src/{lib.rs,paths.rs,event.rs,store.rs},tests/**}` — Acceptance: overrides/environment/default roots resolve without touching real data in tests; the source channel is capacity 256 and alert channel 32; readings derive through a watch snapshot, history commands reply, and cancellation ends the actor within 100 ms — Verify: red/green temp-root and actor tests plus standard workspace gates — Result: 4 focused tests pass; synthetic roots prove settings > environment > default path resolution, bounded channel constants are 256/32, readings/history/75% alerts traverse the actor, and idle cancellation completes within 100 ms; a package-scoped clean removed a stale pre-M3 test binary and a cold full fmt/strict Clippy/workspace test run passes.
+- [x] T4.2 Bounded incremental tailer — Goal: read appended JSONL bytes exactly once while surviving partial lines, truncation/rotation, oversized records, and stale file-state pruning — Files: `crates/usage-sources/src/tail.rs` and focused tempdir tests — Acceptance: appends emit once; partial data completes on the next append; shorter files reset offset; >16 MiB lines are skipped without unbounded buffers; file state older than 8 days is forgotten — Verify: listed red/green tests plus standard workspace gates — Result: 5 focused tempdir tests pass; append/partial delivery is exactly-once, both truncation and inode replacement reset state, oversized lines discard through the next newline while retaining at most 16 MiB per file, complete output batches cap at 4,096 lines/~16 MiB and continue without loss, and modification state older than eight days is pruned; full fmt, strict workspace Clippy, and workspace tests pass.
+- [x] T4.3 Debounced filesystem watcher — Goal: adapt `notify` callbacks into a bounded async path stream with recursive watching, relevant-event filtering, and 500 ms per-path coalescing — Files: `crates/usage-sources/src/watch.rs` and focused tempdir tests — Acceptance: a tempdir write yields one path event, bursts coalesce per path, watcher ownership ends on cancellation — Verify: red/green FSEvents test plus standard workspace gates — Result: 2 native FSEvents tempdir tests pass outside the command sandbox; bounded 256-entry callback/output channels and a 256-path debounce set coalesce write bursts to one canonical path, JSONL/exact-file filters reject irrelevant events, and cancellation drops watcher ownership within 100 ms; full fmt, strict workspace Clippy, and workspace tests pass.
+- [x] T4.4 Adaptive scheduler — Goal: provide per-source due times for activity-aware polling, immediate triggers, minimum gaps, capped backoff, and wake detection — Files: `crates/usage-sources/src/scheduler.rs` and paused-time tests — Acceptance: active/idle intervals, 15 s minimum gap, 30 s→30 min capped backoff with bounded jitter/Retry-After, UI-visible freshness, and >60 s wall/monotonic wake drift follow §§3.3/9.4 — Verify: deterministic `tokio::time::pause()` tests plus standard workspace gates — Result: 5 paused-time/timing tests pass; Codex switches 600 s idle ↔ 120 s active, triggers retain the 15 s floor, failures double from 30 s to a 30 min cap with ±20% jitter and longer Retry-After precedence, stale visible UI reads immediately, >60 s wall/monotonic drift triggers wake detection, and cancellation is prompt; `SourceEvent::Activity` is routed store→scheduler through bounded actor messages; full fmt, strict workspace Clippy, and workspace tests pass.
+
+### Phase review and commit
+
+- [x] Goal: leave M4 bounded, cancellation-safe, deterministic under tests, and ready for concrete sources — Files: Phase 5 changes only — Acceptance: no unbounded channels/buffers, blocking filesystem work on async tasks, leaked watchers/tasks, real-user path access, or duplicate delivery — Verify: fmt, strict workspace Clippy/tests, dependency/resource/diff review, commit, `git log -1 --stat`, clean status — Result: all automated gates through the pre-commit review pass; commit follows this record.
+
+### Review
+
+- Checks: `cargo fmt --all -- --check` ✅ · workspace Clippy with `-D warnings` ✅ · workspace tests ✅ (17 M4 integration tests; none skipped) · native FSEvents tempdir coverage ✅ outside the command sandbox · UI typecheck/lint/build ✅ · direct dependency tree matches §4.1 ✅ · `git diff --check` ✅.
+- Diff review: every M4 source/test file was re-read; paths have one derivation point and tests use synthetic roots, the store/scheduler remain single-owner actors, all mpsc queues and watcher pending state are bounded, every long-lived loop is cancellation-aware, and native watcher ownership stays inside its source task. Review caught an otherwise unbounded vector of completed tail lines: each call now caps both bytes and lines, exposes `has_more`, and a 5,000-line test proves continuation without loss. Partial lines remain capped at 16 MiB; source files remain below 400 lines; production code contains no unwrap/expect/panic/unsafe, real-user test access, leaked task, or unbounded collection.
+- Decisions: D-009 records settings > environment > defaults path precedence.
+- New handover items: none; native FSEvents behavior was verified on the host rather than replaced with a polling fake.
 
 ### Blocked (hard stops only)
 

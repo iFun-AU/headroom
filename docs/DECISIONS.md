@@ -65,3 +65,11 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: the bridge binary derives `~/Library/Application Support/dev.howisit.app` from `HOME` using `std` and directly depends only on `serde_json` and `tempfile`; the later `usage-sources` path module may use `dirs` as specified.
 - Why: this meets T3.1 literally, keeps the latency-sensitive process small, and avoids a third runtime dependency for one fixed macOS path. A missing `HOME` is suppressed like every other bridge error so Claude Code is never disrupted.
 - Evidence: `cargo tree -p statusline-bridge --depth 1` shows exactly the two required direct dependencies, and every M3 integration test supplies a temporary `--out-dir` rather than resolving a real user path.
+
+## D-009 Resolve path settings before inherited environment values (2026-09-23, phase 5)
+
+- Context: DEVELOPMENT.md §8.6 requires one path module to combine Settings overrides, environment-aware tool roots, and platform directories, but does not state which wins when a saved setting and an inherited environment variable are both present.
+- Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail”.
+- Decision: resolve explicit app Settings first, then `CODEX_HOME` / `CLAUDE_CONFIG_DIR`, then the documented home-directory defaults.
+- Why: a path the user selected in onboarding or Settings must remain effective when the GUI happens to inherit a conflicting shell environment; honoring environment variables before defaults still supports standard tool layouts without duplicating path construction elsewhere.
+- Evidence: `Paths::resolve` is the only path constructor, and its temp-root tests exercise settings > environment > default precedence without reading real user directories.
