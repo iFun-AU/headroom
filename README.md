@@ -74,6 +74,8 @@ Enabling **Settings → Accounts → Claude → Real-time updates** performs a c
 
 Claude Code hides most footer keyboard hints while any custom status line is configured. Claude supplies plan limits only for eligible plans and only after the first API response in a session.
 
+Claude Code runs status-line commands only in its interactive terminal UI (`claude` in a terminal). Sessions in the Claude desktop app, IDE extensions, `claude -p`, and the Agent SDK never invoke the bridge, so plan limits update only while you use Claude Code in a terminal. Limits are account-wide, so one terminal response also reflects usage from those other clients. When only such clients have been active, the app reports **Terminal Only** instead of **Likely Overridden**.
+
 To uninstall the bridge, choose **Disable** in the same Accounts pane before removing the app. How Is It re-reads the current settings, restores the exact prior `statusLine` value, and retains unrelated edits made after installation. If another tool or person has replaced the command, How Is It leaves the file untouched instead of overwriting that newer choice.
 
 Project-local, organization, managed, or server settings can take precedence over the user-level `~/.claude/settings.json`. In that case the bridge can be installed but not invoked; after continued Claude activity without bridge writes, the app reports **Likely Overridden** and shows a hint. Resolve the higher-precedence setting rather than repeatedly reinstalling the bridge.

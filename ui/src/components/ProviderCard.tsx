@@ -128,14 +128,34 @@ function UsageBlock({ window, provider, dimmed }: { readonly window: LimitWindow
   );
 }
 
-function BridgeOverridden({ usage, onAction }: { readonly usage: ProviderUsage; readonly onAction: ((action: ProviderCardAction) => void) | undefined }) {
+type BridgeProblem = "likelyOverridden" | "headlessOnly";
+
+/** Chip and explanation for each bridge state in which Claude limits stop updating. */
+const BRIDGE_PROBLEM_COPY: Readonly<Record<BridgeProblem, { readonly chip: string; readonly message: string }>> = {
+  likelyOverridden: {
+    chip: "No updates",
+    message: "No updates received from Claude Code. A project or organization setting may override your status line, or your plan doesn’t report limits.",
+  },
+  headlessOnly: {
+    chip: "Terminal only",
+    message: "Claude Code is running only in the Claude desktop app, an IDE, or the SDK, which don’t run status lines. Limits update while you use claude in a terminal.",
+  },
+};
+
+function bridgeProblem(provider: Provider, status: BridgeStatus | null): BridgeProblem | null {
+  if (provider !== "claude" || status === null) return null;
+  return status.effective === "likelyOverridden" || status.effective === "headlessOnly" ? status.effective : null;
+}
+
+function BridgeNotice({ problem, usage, onAction }: { readonly problem: BridgeProblem; readonly usage: ProviderUsage; readonly onAction: ((action: ProviderCardAction) => void) | undefined }) {
   const session = usage.windows.find((window) => kind(window) === "session");
+  const copy = BRIDGE_PROBLEM_COPY[problem];
   return (
     <>
-      <ProviderHeader usage={usage} onDetails={undefined} statusOverride={<StatusChip tone="warning">No updates</StatusChip>} />
+      <ProviderHeader usage={usage} onDetails={undefined} statusOverride={<StatusChip tone="warning">{copy.chip}</StatusChip>} />
       <div className="bridge-warning" role="status">
         <Icon name="warning" size={15} />
-        <span>No updates received from Claude Code. A project or organization setting may override your status line, or your plan doesn’t report limits.</span>
+        <span>{copy.message}</span>
       </div>
       {session === undefined ? null : <UsageBlock window={session} provider="claude" dimmed />}
       {actionButton("Open Settings", false, onAction === undefined ? undefined : () => { onAction("settings"); })}
@@ -214,7 +234,7 @@ function StaticState({ usage, onAction }: { readonly usage: ProviderUsage; reado
 
 export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAction, className, showThresholdNotice = false, bridgeStatus = null }: ProviderCardProps) {
   if (usage === null) return <LoadingCard provider={provider} className={className} />;
-  const bridgeOverridden = provider === "claude" && bridgeStatus?.effective === "likelyOverridden";
+  const problem = bridgeProblem(provider, bridgeStatus);
   const staticState = <StaticState usage={usage} onAction={onAction} />;
   const disconnected = usage.status.state === "notConfigured" || usage.status.state === "authExpired" || usage.status.state === "unsupported" || usage.status.state === "error";
   const session = usage.windows.find((window) => kind(window) === "session");
@@ -224,9 +244,9 @@ export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAct
   const details = onAction === undefined ? undefined : () => { onAction("details"); };
 
   return (
-    <section className={`provider-card card ${className ?? ""}`} data-status={bridgeOverridden ? "likelyOverridden" : usage.status.state}>
-      {bridgeOverridden ? <BridgeOverridden usage={usage} onAction={onAction} /> : null}
-      {bridgeOverridden ? null : (
+    <section className={`provider-card card ${className ?? ""}`} data-status={problem ?? usage.status.state}>
+      {problem === null ? null : <BridgeNotice problem={problem} usage={usage} onAction={onAction} />}
+      {problem !== null ? null : (
         <>
       <ProviderHeader usage={usage} onDetails={disconnected ? undefined : details} />
       {disconnected ? staticState : null}

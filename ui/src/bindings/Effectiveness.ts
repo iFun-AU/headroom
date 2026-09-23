@@ -3,4 +3,4 @@
 /**
  * Behavioral confidence that Claude Code is invoking the installed bridge.
  */
-export type Effectiveness = "unverified" | "confirmed" | "likelyOverridden";
+export type Effectiveness = "unverified" | "confirmed" | "likelyOverridden" | "headlessOnly";

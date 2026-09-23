@@ -6,19 +6,23 @@ use std::time::Duration;
 
 use tokio::time::{Instant, advance, timeout};
 use tokio_util::sync::CancellationToken;
-use usage_core::UnixSeconds;
+use usage_core::{UnixSeconds, parse::ClaudeSession};
 use usage_sources::claude::effectiveness::{
-    Effectiveness, EffectivenessHandle, EffectivenessTracker, LIKELY_OVERRIDDEN_HINT,
+    Effectiveness, EffectivenessHandle, EffectivenessTracker, HEADLESS_ONLY_HINT,
+    LIKELY_OVERRIDDEN_HINT,
 };
+
+const INTERACTIVE: ClaudeSession = ClaudeSession::Interactive;
+const HEADLESS: ClaudeSession = ClaudeSession::Headless;
 
 #[test]
 fn pure_tracker_uses_strict_ten_minute_boundary_and_recovers_on_write() {
     let installed_at = UnixSeconds(1_000);
     let mut tracker = EffectivenessTracker::new(Some(installed_at));
 
-    assert!(tracker.assistant_activity(UnixSeconds(1_600)));
+    assert!(tracker.assistant_activity(UnixSeconds(1_600), INTERACTIVE));
     assert_eq!(tracker.snapshot().effective, Effectiveness::Unverified);
-    assert!(tracker.assistant_activity(UnixSeconds(1_601)));
+    assert!(tracker.assistant_activity(UnixSeconds(1_601), INTERACTIVE));
     assert_eq!(
         tracker.snapshot().effective,
         Effectiveness::LikelyOverridden
@@ -30,6 +34,48 @@ fn pure_tracker_uses_strict_ten_minute_boundary_and_recovers_on_write() {
     assert_eq!(tracker.snapshot().effective, Effectiveness::Confirmed);
     assert!(!tracker.bridge_written(UnixSeconds(999)));
     assert_eq!(tracker.snapshot().effective, Effectiveness::Confirmed);
+}
+
+#[test]
+fn headless_only_activity_is_not_reported_as_an_override() {
+    let mut tracker = EffectivenessTracker::new(Some(UnixSeconds(1_000)));
+
+    assert!(tracker.assistant_activity(UnixSeconds(1_600), HEADLESS));
+    assert_eq!(tracker.snapshot().effective, Effectiveness::Unverified);
+    assert!(tracker.assistant_activity(UnixSeconds(1_601), HEADLESS));
+    assert_eq!(tracker.snapshot().effective, Effectiveness::HeadlessOnly);
+    assert_eq!(tracker.snapshot().last_activity, Some(UnixSeconds(1_601)));
+    assert!(HEADLESS_ONLY_HINT.contains("desktop app"));
+    assert!(HEADLESS_ONLY_HINT.contains("terminal"));
+
+    assert!(tracker.bridge_written(UnixSeconds(1_700)));
+    assert_eq!(tracker.snapshot().effective, Effectiveness::Confirmed);
+    assert!(tracker.assistant_activity(UnixSeconds(2_301), HEADLESS));
+    assert_eq!(tracker.snapshot().effective, Effectiveness::HeadlessOnly);
+}
+
+#[test]
+fn interactive_override_evidence_outranks_headless_activity() {
+    let mut tracker = EffectivenessTracker::new(Some(UnixSeconds(1_000)));
+
+    assert!(tracker.assistant_activity(UnixSeconds(1_900), HEADLESS));
+    assert_eq!(tracker.snapshot().effective, Effectiveness::HeadlessOnly);
+    // Older interactive evidence from a concurrently tailed file still counts
+    // without moving the latest activity timestamp backwards.
+    assert!(tracker.assistant_activity(UnixSeconds(1_700), INTERACTIVE));
+    assert_eq!(
+        tracker.snapshot().effective,
+        Effectiveness::LikelyOverridden
+    );
+    assert_eq!(tracker.snapshot().last_activity, Some(UnixSeconds(1_900)));
+
+    assert!(tracker.assistant_activity(UnixSeconds(2_000), HEADLESS));
+    assert_eq!(
+        tracker.snapshot().effective,
+        Effectiveness::LikelyOverridden
+    );
+    assert!(!tracker.assistant_activity(UnixSeconds(1_800), HEADLESS));
+    assert!(!tracker.assistant_activity(UnixSeconds(999), INTERACTIVE));
 }
 
 #[tokio::test(start_paused = true)]
@@ -49,7 +95,7 @@ async fn actor_moves_unverified_to_likely_overridden_then_confirmed() {
             .saturating_add(i64::try_from(elapsed).expect("elapsed test time should fit")),
     );
     handle
-        .assistant_activity(activity_at)
+        .assistant_activity(activity_at, INTERACTIVE)
         .await
         .expect("activity should enqueue");
     timeout(Duration::from_secs(1), snapshots.changed())
@@ -89,7 +135,7 @@ async fn bounded_actor_applies_bursts_without_dropping_latest_evidence() {
     let final_activity = UnixSeconds(1_704);
     for seconds in (1_011..=final_activity.0).step_by(11) {
         handle
-            .assistant_activity(UnixSeconds(seconds))
+            .assistant_activity(UnixSeconds(seconds), INTERACTIVE)
             .await
             .expect("every activity should enqueue with backpressure");
     }

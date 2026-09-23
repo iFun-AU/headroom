@@ -115,7 +115,8 @@
   margin-top: 1px;
 }
 
-.provider-card[data-status="likelyOverridden"] .capsule-button {
+.provider-card[data-status="likelyOverridden"] .capsule-button,
+.provider-card[data-status="headlessOnly"] .capsule-button {
   align-self: flex-start;
 }
 

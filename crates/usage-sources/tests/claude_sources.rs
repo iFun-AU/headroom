@@ -289,3 +289,54 @@ async fn history_scan_and_watched_append_emit_dedupable_tokens_and_activity() {
         .await
         .expect("effectiveness actor should not panic");
 }
+
+#[tokio::test]
+async fn desktop_app_history_reports_headless_only_instead_of_override() {
+    let directory = tempdir().expect("tempdir should be created");
+    let projects = directory.path().join("projects");
+    let project = projects.join("example");
+    tokio::fs::create_dir_all(&project)
+        .await
+        .expect("history tree should be created");
+    let desktop_line = r#"{"type":"assistant","timestamp":"2026-08-26T10:25:31Z","entrypoint":"claude-desktop","requestId":"req-desktop","message":{"id":"msg-desktop","usage":{"input_tokens":2,"output_tokens":3}}}"#;
+    tokio::fs::write(project.join("session.jsonl"), format!("{desktop_line}\n"))
+        .await
+        .expect("history fixture should be written");
+    let activity_at = parse_claude_log_line(desktop_line)
+        .expect("desktop line should parse")
+        .expect("desktop line should contain token usage")
+        .at;
+
+    let cancel = CancellationToken::new();
+    let (effectiveness, actor) =
+        EffectivenessHandle::channel(Some(UnixSeconds(activity_at.0 - 601)));
+    let mut effectiveness_rx = effectiveness.subscribe();
+    let actor_task = tokio::spawn(actor.run(cancel.child_token()));
+    let source = HistorySource::new(HistorySourceConfig::new(&projects), effectiveness);
+    let (events, mut event_rx) = mpsc::channel(16);
+    let source_task = tokio::spawn(source.run(events, cancel.child_token()));
+
+    let initial = timeout(Duration::from_secs(2), event_rx.recv())
+        .await
+        .expect("initial history scan should emit")
+        .expect("source event channel should stay open");
+    assert!(matches!(initial, SourceEvent::Tokens(ref tokens) if tokens.len() == 1));
+    timeout(Duration::from_secs(1), effectiveness_rx.changed())
+        .await
+        .expect("headless evidence should arrive")
+        .expect("effectiveness actor should stay open");
+    assert_eq!(
+        effectiveness_rx.borrow().effective,
+        Effectiveness::HeadlessOnly
+    );
+
+    cancel.cancel();
+    timeout(Duration::from_secs(1), source_task)
+        .await
+        .expect("history source should cancel promptly")
+        .expect("history source task should not panic")
+        .expect("history source should stop cleanly");
+    actor_task
+        .await
+        .expect("effectiveness actor should not panic");
+}

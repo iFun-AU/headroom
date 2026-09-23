@@ -8,7 +8,9 @@ mod codex_rollout;
 use chrono::DateTime;
 use thiserror::Error;
 
-pub use claude_log::parse_claude_log_line;
+pub use claude_log::{
+    ClaudeLogRecord, ClaudeSession, parse_claude_log_line, parse_claude_log_record,
+};
 pub use claude_statusline::parse_claude_statusline;
 pub use codex_app_server::{
     parse_codex_rate_limits_notification, parse_codex_rate_limits_response,

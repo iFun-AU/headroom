@@ -143,6 +143,11 @@ export const MOCK_OVERRIDDEN_BRIDGE: BridgeStatus = {
   effective: "likelyOverridden",
 };
 
+export const MOCK_HEADLESS_BRIDGE: BridgeStatus = {
+  ...MOCK_BRIDGE_STATUS,
+  effective: "headlessOnly",
+};
+
 export const MOCK_CODEX_DETECTION: CodexDetection = {
   path: "/opt/homebrew/bin/codex",
   version: "0.154.0",
@@ -183,6 +188,7 @@ export const MOCK_CARD_STATES: readonly {
   { title: "Single-window plan", provider: "codex", usage: { ...singleWindow, windows: singleWindow.windows.filter((window) => window.kind.kind === "weekly") } },
   { title: "Reset pending", provider: "claude", usage: withWindows(mockProviderUsage("claude"), { session: { used: 0, resetsAt: NOW - 30, resetPending: true } }) },
   { title: "Bridge likely overridden", provider: "claude", usage: mockProviderUsage("claude"), bridgeStatus: MOCK_OVERRIDDEN_BRIDGE },
+  { title: "Bridge terminal only", provider: "claude", usage: { ...mockProviderUsage("claude"), windows: [] }, bridgeStatus: MOCK_HEADLESS_BRIDGE },
   { title: "Unsupported", provider: "codex", usage: { ...mockProviderUsage("codex"), windows: [], status: { state: "unsupported", reason: "This Codex version doesn’t support reading rate limits. Update Codex CLI, then retry." } } },
   { title: "Auth expired", provider: "claude", usage: { ...mockProviderUsage("claude"), windows: [], status: { state: "authExpired", hint: "Open Claude Code to refresh sign-in." } } },
 ];

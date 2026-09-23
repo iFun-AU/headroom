@@ -7,13 +7,16 @@ use thiserror::Error;
 use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
 use ts_rs::TS;
-use usage_core::UnixSeconds;
+use usage_core::{UnixSeconds, parse::ClaudeSession};
 
 const COMMAND_CAPACITY: usize = 32;
 const OVERRIDE_EVIDENCE_DELAY: Duration = Duration::from_mins(10);
 
 /// Explanation shown when assistant activity continues without bridge writes.
 pub const LIKELY_OVERRIDDEN_HINT: &str = "No updates received from Claude Code. A project or organization setting may override your status line, or your plan doesn't report limits.";
+
+/// Explanation shown when only clients without a status line are active.
+pub const HEADLESS_ONLY_HINT: &str = "Claude Code is running only in the Claude desktop app, an IDE, or the SDK, which don't run status lines. Limits update while you use `claude` in a terminal.";
 
 /// Behavioral confidence that Claude Code is invoking the installed bridge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -24,8 +27,12 @@ pub enum Effectiveness {
     Unverified,
     /// A bridge file was written after the current installation.
     Confirmed,
-    /// Assistant activity continued for over ten minutes without a bridge write.
+    /// Interactive terminal activity continued for over ten minutes without a
+    /// bridge write.
     LikelyOverridden,
+    /// Only headless clients (desktop app, IDE, SDK), which never run the
+    /// status line, were active for over ten minutes without a bridge write.
+    HeadlessOnly,
 }
 
 /// Observable effectiveness evidence for Settings and diagnostics.
@@ -96,20 +103,35 @@ impl EffectivenessTracker {
         true
     }
 
-    /// Records latest assistant usage and evaluates override evidence.
-    pub fn assistant_activity(&mut self, at: UnixSeconds) -> bool {
+    /// Records assistant usage and evaluates override evidence.
+    ///
+    /// Only interactive terminal sessions can invoke the status line, so only
+    /// their activity is evidence of an override. Headless activity explains a
+    /// missing write without implying a settings problem, and never masks
+    /// stronger interactive evidence. Out-of-order evidence from concurrent
+    /// session files is still evaluated; `last_activity` stays monotonic.
+    pub fn assistant_activity(&mut self, at: UnixSeconds, session: ClaudeSession) -> bool {
         let Some(installed_at) = self.snapshot.installed_at else {
             return false;
         };
-        if at < installed_at || self.snapshot.last_activity.is_some_and(|old| at <= old) {
+        if at < installed_at {
             return false;
         }
-        self.snapshot.last_activity = Some(at);
+        let before = self.snapshot;
+        if self.snapshot.last_activity.is_none_or(|old| at > old) {
+            self.snapshot.last_activity = Some(at);
+        }
         let baseline = self.snapshot.last_bridge_write.unwrap_or(installed_at);
         if after_delay(at, baseline, OVERRIDE_EVIDENCE_DELAY) {
-            self.snapshot.effective = Effectiveness::LikelyOverridden;
+            self.snapshot.effective = match (session, self.snapshot.effective) {
+                (ClaudeSession::Interactive, _)
+                | (ClaudeSession::Headless, Effectiveness::LikelyOverridden) => {
+                    Effectiveness::LikelyOverridden
+                }
+                (ClaudeSession::Headless, _) => Effectiveness::HeadlessOnly,
+            };
         }
-        true
+        self.snapshot != before
     }
 
     fn installation(&mut self, installed_at: Option<UnixSeconds>) -> bool {
@@ -207,8 +229,12 @@ impl EffectivenessHandle {
     /// # Errors
     ///
     /// Returns [`EffectivenessError::Closed`] after the actor stops.
-    pub async fn assistant_activity(&self, at: UnixSeconds) -> Result<(), EffectivenessError> {
-        self.send(Command::AssistantActivity(at)).await
+    pub async fn assistant_activity(
+        &self,
+        at: UnixSeconds,
+        session: ClaudeSession,
+    ) -> Result<(), EffectivenessError> {
+        self.send(Command::AssistantActivity(at, session)).await
     }
 
     async fn send(&self, command: Command) -> Result<(), EffectivenessError> {
@@ -247,7 +273,7 @@ impl EffectivenessActor {
             Command::Install(at) => self.tracker.install(at),
             Command::Uninstall => self.tracker.uninstall(),
             Command::BridgeWritten(at) => self.tracker.bridge_written(at),
-            Command::AssistantActivity(at) => self.tracker.assistant_activity(at),
+            Command::AssistantActivity(at, session) => self.tracker.assistant_activity(at, session),
         }
     }
 }
@@ -257,7 +283,7 @@ enum Command {
     Install(UnixSeconds),
     Uninstall,
     BridgeWritten(UnixSeconds),
-    AssistantActivity(UnixSeconds),
+    AssistantActivity(UnixSeconds, ClaudeSession),
 }
 
 fn after_delay(candidate: UnixSeconds, baseline: UnixSeconds, delay: Duration) -> bool {

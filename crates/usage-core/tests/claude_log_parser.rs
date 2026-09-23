@@ -5,7 +5,7 @@
 use chrono::Utc;
 use usage_core::{
     HistoryStore, Provider, SourceKind,
-    parse::{Error, parse_claude_log_line},
+    parse::{ClaudeSession, Error, parse_claude_log_line, parse_claude_log_record},
 };
 
 #[test]
@@ -72,4 +72,27 @@ fn overflowing_token_components_are_rejected() {
         parse_claude_log_line(input),
         Err(Error::TokenOverflow)
     ));
+}
+
+#[test]
+fn entrypoint_classifies_status_line_capable_sessions() {
+    let line = |entrypoint: &str| {
+        format!(
+            r#"{{"type":"assistant","timestamp":"2026-08-26T10:25:40Z",{entrypoint}"message":{{"usage":{{"output_tokens":3}}}}}}"#
+        )
+    };
+    for (entrypoint, expected) in [
+        ("", ClaudeSession::Interactive),
+        (r#""entrypoint":"cli","#, ClaudeSession::Interactive),
+        (r#""entrypoint":"claude-desktop","#, ClaudeSession::Headless),
+        (r#""entrypoint":"claude-vscode","#, ClaudeSession::Headless),
+        (r#""entrypoint":"sdk-cli","#, ClaudeSession::Headless),
+        (r#""entrypoint":"future-client","#, ClaudeSession::Headless),
+    ] {
+        let record = parse_claude_log_record(&line(entrypoint))
+            .expect("record should parse")
+            .expect("usage should produce a record");
+        assert_eq!(record.session, expected, "entrypoint: {entrypoint}");
+        assert_eq!(record.event.tokens.0, 3);
+    }
 }

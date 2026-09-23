@@ -12,7 +12,8 @@ use tokio::{sync::mpsc, time::Instant};
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 use usage_core::{
-    ConnectionStatus, Provider, SourceKind, TokenEvent, parse::parse_claude_log_line,
+    ConnectionStatus, Provider, SourceKind,
+    parse::{ClaudeLogRecord, ClaudeSession, parse_claude_log_record},
 };
 
 use crate::{
@@ -205,15 +206,15 @@ impl HistoryProcessor {
             }
             let batch = self.tailer.read_new(path).await?;
             self.last_seen.insert(path.to_path_buf(), Instant::now());
-            let mut tokens = Vec::with_capacity(batch.lines.len());
+            let mut records = Vec::with_capacity(batch.lines.len());
             let mut parse_failed = false;
             for line in batch.lines.into_iter().filter(|line| relevant(line)) {
                 if cancel.is_cancelled() {
                     return Ok(());
                 }
                 match std::str::from_utf8(&line) {
-                    Ok(text) => match parse_claude_log_line(text) {
-                        Ok(Some(event)) => tokens.push(event),
+                    Ok(text) => match parse_claude_log_record(text) {
+                        Ok(Some(record)) => records.push(record),
                         Ok(None) => {}
                         Err(error) => {
                             warn!(error = %usage_core::log_trunc(&error.to_string()), "invalid Claude history record");
@@ -226,7 +227,7 @@ impl HistoryProcessor {
                     }
                 }
             }
-            self.emit_tokens(tokens, emit_activity, events, cancel)
+            self.emit_tokens(records, emit_activity, events, cancel)
                 .await?;
             if parse_failed {
                 emit_error(events, cancel)
@@ -241,15 +242,24 @@ impl HistoryProcessor {
 
     async fn emit_tokens(
         &self,
-        tokens: Vec<TokenEvent>,
+        records: Vec<ClaudeLogRecord>,
         emit_activity: bool,
         events: &mpsc::Sender<SourceEvent>,
         cancel: &CancellationToken,
     ) -> Result<(), ProcessError> {
-        let latest = tokens.iter().map(|event| event.at).max();
-        if tokens.is_empty() {
+        if records.is_empty() {
             return Ok(());
         }
+        // Latest activity per session kind; a batch normally comes from one file.
+        let activity = [ClaudeSession::Headless, ClaudeSession::Interactive].map(|session| {
+            let latest = records
+                .iter()
+                .filter(|record| record.session == session)
+                .map(|record| record.event.at)
+                .max();
+            (session, latest)
+        });
+        let tokens = records.into_iter().map(|record| record.event).collect();
         send_event(events, SourceEvent::Tokens(tokens), cancel)
             .await
             .map_err(|_| ProcessError::EventChannelClosed)?;
@@ -264,10 +274,12 @@ impl HistoryProcessor {
             .await
             .map_err(|_| ProcessError::EventChannelClosed)?;
         }
-        if let Some(at) = latest
-            && let Err(error) = self.effectiveness.assistant_activity(at).await
-        {
-            warn!(%error, "could not record Claude bridge effectiveness activity");
+        for (session, at) in activity {
+            if let Some(at) = at
+                && let Err(error) = self.effectiveness.assistant_activity(at, session).await
+            {
+                warn!(%error, "could not record Claude bridge effectiveness activity");
+            }
         }
         Ok(())
     }
