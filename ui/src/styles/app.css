@@ -1,0 +1,138 @@
+@import "./tokens.css";
+@import "./glass.css";
+@import "./neon.css";
+@import "./controls.css";
+@import "./components.css";
+@import "./charts.css";
+@import "./dashboard.css";
+@import "./widget.css";
+@import "./settings.css";
+@import "./onboarding.css";
+@import "./screens.css";
+@import "./accessibility.css";
+
+html,
+body,
+#root {
+  background: transparent;
+  height: 100%;
+  margin: 0;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+button,
+input,
+select {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif;
+}
+
+body {
+  color: var(--label);
+  font-size: 13px;
+  line-height: 1.3;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.demo-screen {
+  background: var(--solid-win);
+  height: 100%;
+  overflow: auto;
+  padding: 60px;
+}
+
+.demo-panel {
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 24px 28px;
+}
+
+.demo-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.demo-heading h1 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.demo-heading p {
+  color: var(--label2);
+  font-size: 12px;
+  margin: 0;
+}
+
+.demo-bars {
+  border-top: 1px solid var(--sep);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.demo-bar-row {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 118px minmax(220px, 1fr) 150px;
+  min-height: 36px;
+}
+
+.demo-bar-row > strong {
+  font-size: 12px;
+}
+
+.demo-bar-row > span {
+  color: var(--label2);
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .demo-screen {
+    padding: 20px;
+  }
+
+  .demo-bar-row {
+    grid-template-columns: 100px minmax(150px, 1fr);
+  }
+
+  .demo-bar-row > span {
+    grid-column: 2;
+  }
+}

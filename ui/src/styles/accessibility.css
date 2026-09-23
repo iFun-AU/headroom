@@ -1,0 +1,115 @@
+.accessibility-demo {
+  background: var(--solid-win);
+  display: grid;
+  gap: 40px;
+  grid-template-areas:
+    "transparency motion"
+    "contrast colour";
+  grid-template-columns: 760px 740px;
+  min-height: 100%;
+  overflow: auto;
+  padding: 60px;
+  width: max-content;
+}
+
+.accessibility-panel {
+  border-radius: 28px;
+  padding: 24px 28px;
+}
+
+.accessibility-panel > header h1 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.accessibility-panel > header p {
+  color: var(--label2);
+  font-size: 12px;
+  margin: 3px 0 0;
+}
+
+.accessibility-panel--transparency {
+  grid-area: transparency;
+}
+
+.accessibility-card-preview {
+  margin-top: 20px;
+  width: 332px;
+}
+
+.accessibility-card-preview .provider-card {
+  background: var(--solid-card);
+  height: 274px;
+}
+
+.accessibility-panel--motion {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  grid-area: motion;
+}
+
+.accessibility-motion *,
+.accessibility-motion *::before,
+.accessibility-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.accessibility-comparison {
+  margin: 0;
+}
+
+.accessibility-comparison > div {
+  border-top: 1px solid var(--sep);
+  display: grid;
+  font-size: 12px;
+  grid-template-columns: 150px 1fr;
+  padding: 8px 0;
+}
+
+.accessibility-comparison dt {
+  font-weight: 600;
+}
+
+.accessibility-comparison dd {
+  color: var(--label2);
+  margin: 0;
+}
+
+.accessibility-panel--contrast ul {
+  color: var(--label2);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 16px 0 0;
+  padding-left: 18px;
+}
+
+.accessibility-panel--contrast {
+  align-self: start;
+  grid-area: contrast;
+}
+
+.accessibility-panel--colour {
+  align-self: start;
+  grid-area: colour;
+}
+
+.accessibility-greyscale {
+  filter: grayscale(1);
+  margin-top: 16px;
+}
+
+.accessibility-greyscale .demo-bar-row {
+  grid-template-columns: 105px minmax(280px, 1fr) 100px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accessibility-demo *,
+  .accessibility-demo *::before,
+  .accessibility-demo *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,83 @@
+.glass {
+  background:
+    linear-gradient(155deg, var(--hl-a) 0%, transparent 30%, transparent 72%, var(--hl-b) 100%),
+    var(--glass-win);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 var(--spec),
+    inset 0 -1px 0 var(--spec-low),
+    inset 0 0 20px var(--glass-inner);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+}
+
+.glass.dense {
+  background:
+    linear-gradient(155deg, var(--hl-a) 0%, transparent 30%, transparent 72%, var(--hl-b) 100%),
+    var(--glass-dense);
+}
+
+.glass.pop {
+  background: linear-gradient(155deg, var(--hl-a) 0%, transparent 30%), var(--glass-pop);
+}
+
+.card {
+  background: linear-gradient(170deg, var(--hl-b) 0%, transparent 40%), var(--glass-card);
+  border: 1px solid var(--card-edge);
+  box-shadow: inset 0 1px 0 var(--spec-soft), 0 1px 2px var(--card-shadow);
+}
+
+.tile {
+  background: var(--glass-tile);
+  border: 1px solid var(--card-edge);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 var(--spec-soft);
+}
+
+.ctl {
+  background: var(--control);
+  border: 1px solid var(--control-edge);
+  box-shadow: inset 0 1px 0 var(--spec-soft);
+}
+
+.ctl-sel {
+  background: var(--control-sel);
+  box-shadow: 0 1px 3px var(--selection-shadow), inset 0 1px 0 var(--spec-soft);
+}
+
+.tipbox {
+  background: var(--glass-pop);
+  border: 1px solid var(--glass-edge);
+  box-shadow: 0 12px 30px var(--popover-shadow), inset 0 1px 0 var(--spec-soft);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.no-glass .glass,
+.no-glass .glass.dense,
+.no-glass .glass.pop {
+  background: var(--solid-win);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.no-glass .card,
+.no-glass .tile {
+  background: var(--solid-card);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass.dense,
+  .glass.pop {
+    background: var(--solid-win);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .card,
+  .tile {
+    background: var(--solid-card);
+  }
+}

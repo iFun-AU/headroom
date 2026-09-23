@@ -1,0 +1,284 @@
+.num {
+  font-family: "SF Pro Rounded", ui-rounded, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.neon {
+  text-shadow: 0 0 calc(var(--gk) * 16px) color-mix(in srgb, currentColor 55%, transparent);
+}
+
+.cap {
+  color: var(--label2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.neon-bar {
+  --bar-color: var(--claude);
+  --bar-text-color: var(--claude-text);
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.neon-bar[data-tone="codex"] {
+  --bar-color: var(--codex);
+  --bar-text-color: var(--codex-text);
+}
+
+.neon-bar[data-level="warning"] {
+  --bar-color: var(--warn);
+  --bar-text-color: var(--warn-text);
+}
+
+.neon-bar[data-level="critical"],
+.neon-bar[data-level="limit"] {
+  --bar-color: var(--crit);
+  --bar-text-color: var(--crit-text);
+}
+
+.neon-bar[data-dimmed="true"] {
+  --bar-color: var(--label3);
+  --bar-text-color: var(--label2);
+  opacity: 0.55;
+}
+
+.neon-bar[data-dimmed="true"] .neon-bar__fill {
+  background: var(--label3);
+  box-shadow: none;
+}
+
+.neon-bar[data-dimmed="true"] .neon-bar__core,
+.neon-bar[data-dimmed="true"] .neon-bar__head,
+.neon-bar[data-dimmed="true"] .neon-bar__reflection {
+  display: none;
+}
+
+.neon-bar__visual {
+  height: var(--bar-height);
+  min-width: 0;
+  position: relative;
+}
+
+.neon-bar__track,
+.neon-bar__fill,
+.neon-bar__halo {
+  border-radius: 999px;
+  inset-block: 0;
+  inset-inline-start: 0;
+  position: absolute;
+}
+
+.neon-bar__track {
+  background: var(--track);
+  box-shadow: inset 0 1px 2px var(--track-shadow), inset 0 0 0 0.5px var(--sep);
+  inset-inline-end: 0;
+}
+
+.neon-bar__reflection {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bar-color) 50%, transparent), transparent);
+  border-radius: 999px;
+  filter: blur(calc(var(--bar-height) / 4));
+  height: max(4px, calc(var(--bar-height) * 0.7));
+  inset-inline-start: calc(var(--bar-height) / 2);
+  opacity: calc(0.25 + var(--gk) * 0.4);
+  position: absolute;
+  top: calc(var(--bar-height) + 2px);
+  width: max(0px, calc(var(--bar-width) - var(--bar-height)));
+}
+
+.neon-bar__halo {
+  animation: halo 1.8s ease-in-out infinite;
+  box-shadow:
+    0 0 calc(var(--gk) * 26px) var(--bar-color),
+    0 0 0 1px color-mix(in srgb, var(--bar-color) 60%, transparent);
+  inset: -3px;
+  opacity: 0.25;
+  width: calc(100% + 6px);
+}
+
+.neon-bar__fill {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--bar-color) 50%, transparent) 0%,
+    var(--bar-color) 65%,
+    color-mix(in srgb, var(--bar-color) 70%, var(--pure-white)) 100%
+  );
+  box-shadow:
+    0 0 calc(var(--gk) * var(--bar-bloom-near)) color-mix(in srgb, var(--bar-color) 85%, transparent),
+    0 0 calc(var(--gk) * var(--bar-bloom-far)) color-mix(in srgb, var(--bar-color) 50%, transparent);
+  min-width: min(var(--bar-height), var(--bar-width));
+  overflow: visible;
+  transition: width 600ms cubic-bezier(0.3, 1.5, 0.5, 1);
+  width: var(--bar-width);
+}
+
+.neon-bar__fill[data-phase="entering"] {
+  transition-delay: 80ms;
+  transition-duration: 1.2s;
+}
+
+.neon-bar__fill[data-empty="true"] {
+  min-width: 0;
+}
+
+.neon-bar__fill[data-limit="true"] {
+  animation: pulse 1.8s ease-in-out 1.28s infinite;
+}
+
+.neon-bar__core {
+  background: linear-gradient(90deg, transparent, var(--core));
+  border-radius: 999px;
+  height: max(1.5px, calc(var(--bar-height) * 0.2));
+  inset-inline: calc(var(--bar-height) / 2) calc(var(--bar-height) * 0.9);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.neon-bar__head {
+  background: radial-gradient(
+    circle,
+    var(--pure-white) 0%,
+    color-mix(in srgb, var(--bar-color) 50%, var(--pure-white)) 40%,
+    transparent 72%
+  );
+  border-radius: 50%;
+  height: calc(var(--bar-height) - 2px);
+  inset-inline-end: 1px;
+  position: absolute;
+  top: 1px;
+  width: calc(var(--bar-height) - 2px);
+}
+
+.neon-bar__value {
+  align-items: center;
+  color: var(--bar-text-color);
+  display: flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: 48px;
+}
+
+.neon-bar__value[data-pending="true"] {
+  color: var(--label2);
+  min-width: max-content;
+}
+
+.neon-bar__status-icon {
+  fill: none;
+  flex: 0 0 auto;
+  height: 14px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.1;
+  width: 14px;
+}
+
+.neon-bar__tooltip {
+  border-radius: 12px;
+  bottom: calc(var(--bar-height) + 12px);
+  color: var(--label2);
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  gap: 2px;
+  inset-inline-start: clamp(-10px, calc(var(--bar-width) - 90px), calc(100% - 170px));
+  opacity: 0;
+  padding: 9px 11px;
+  pointer-events: none;
+  position: absolute;
+  text-align: start;
+  transform: translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.neon-bar__tooltip strong {
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.neon-bar__visual:hover .neon-bar__tooltip,
+.neon-bar__visual:focus-visible .neon-bar__tooltip {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.55) saturate(1.3);
+  }
+}
+
+@keyframes halo {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -30% 0;
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+}
+
+.hb {
+  animation: rise 0.9s cubic-bezier(0.3, 1.5, 0.5, 1) backwards;
+  transform-origin: center bottom;
+}
+
+.shim {
+  animation: shimmer 1.6s linear infinite;
+  background: linear-gradient(100deg, var(--sk1) 30%, var(--sk2) 50%, var(--sk1) 70%);
+  background-size: 250% 100%;
+}
+
+.spark {
+  animation: draw 1.6s ease-out backwards;
+  stroke-dasharray: 1000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-bar__fill,
+  .neon-bar__halo,
+  .hb,
+  .shim,
+  .spark {
+    animation: none;
+    transition: none;
+  }
+}

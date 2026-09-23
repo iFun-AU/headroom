@@ -1,0 +1,312 @@
+.chart-card {
+  border-radius: 20px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px 12px;
+}
+
+.chart-card[data-grow="wide"] {
+  flex-grow: 1.5;
+}
+
+.chart-card__header {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.chart-card__header strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chart-card__header span,
+.chart-card__scope {
+  color: var(--label2);
+  font-size: 11px;
+}
+
+.chart-card__header span {
+  margin-left: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-card__scope {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+}
+
+.chart-card__scope span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hourly-chart,
+.daily-chart {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.hourly-chart__grid {
+  bottom: 22px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 20px;
+}
+
+.hourly-chart__grid > span {
+  border-top: 1px dashed var(--sep);
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.hourly-chart__grid > span:first-child {
+  top: 0;
+}
+
+.hourly-chart__grid > span:nth-child(2) {
+  top: 50%;
+}
+
+.hourly-chart__grid > span:last-child {
+  border-top-style: solid;
+  bottom: 0;
+}
+
+.hourly-chart__grid b {
+  color: var(--label2);
+  font-size: 10px;
+  font-weight: 400;
+  position: absolute;
+  right: 0;
+  top: -7px;
+}
+
+.hourly-chart__bars {
+  bottom: 0;
+  display: flex;
+  left: 0;
+  position: absolute;
+  right: 34px;
+  top: 20px;
+}
+
+.daily-chart {
+  border-bottom: 1px solid transparent;
+  display: flex;
+  padding-top: 18px;
+}
+
+.daily-chart::before {
+  background: var(--sep);
+  bottom: 22px;
+  content: "";
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.chart-slot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+.chart-slot__plot {
+  align-items: flex-end;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-height: 0;
+  position: relative;
+}
+
+.chart-slot__label {
+  color: var(--label2);
+  flex: 0 0 22px;
+  font-size: 10px;
+  line-height: 22px;
+  overflow: visible;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.daily-chart .chart-slot__label {
+  font-size: 11px;
+}
+
+.chart-slot[data-current="true"] .chart-slot__label {
+  color: var(--provider-text);
+  font-weight: 700;
+}
+
+.daily-chart .chart-slot[data-current="true"] .chart-slot__label {
+  color: var(--label);
+}
+
+.chart-bar {
+  animation: chart-rise 520ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  animation-delay: var(--bar-delay);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--provider-color) 70%, var(--pure-white)),
+    var(--provider-color) 32%,
+    color-mix(in srgb, var(--provider-color) 42%, transparent)
+  );
+  border: 0;
+  box-shadow:
+    0 0 calc(var(--gk) * 5px) color-mix(in srgb, var(--provider-color) 80%, transparent),
+    0 0 calc(var(--gk) * 12px) color-mix(in srgb, var(--provider-color) 40%, transparent);
+  cursor: default;
+  flex: 0 0 auto;
+  height: max(3px, var(--bar-height));
+  opacity: 0.82;
+  padding: 0;
+  position: relative;
+}
+
+.chart-bar--hourly {
+  border-radius: 999px 999px 2px 2px;
+  width: 56%;
+}
+
+.chart-bar--daily {
+  border-radius: 7px 7px 3px 3px;
+  max-width: 20px;
+  width: 58%;
+}
+
+.chart-slot[data-current="true"] .chart-bar {
+  box-shadow:
+    0 0 calc(var(--gk) * 8px) color-mix(in srgb, var(--provider-color) 80%, transparent),
+    0 0 calc(var(--gk) * 19px) color-mix(in srgb, var(--provider-color) 40%, transparent);
+  opacity: 1;
+}
+
+.hourly-chart .chart-slot[data-current="true"] .chart-bar {
+  background:
+    linear-gradient(90deg, transparent 30%, var(--core) 50%, transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--provider-color) 70%, var(--pure-white)), var(--provider-color) 30%, color-mix(in srgb, var(--provider-color) 40%, transparent));
+}
+
+.chart-slot__value {
+  bottom: calc(var(--bar-height) + 5px);
+  color: var(--label2);
+  font-size: 10px;
+  font-weight: 500;
+  position: absolute;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hourly-chart .chart-slot__value {
+  color: var(--provider-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.daily-chart .chart-slot[data-current="true"] .chart-slot__value {
+  color: var(--provider-text);
+  font-weight: 700;
+}
+
+.chart-bar .tipbox {
+  border-radius: 9px;
+  bottom: calc(100% + 12px);
+  display: flex;
+  flex-direction: column;
+  font-size: 10px;
+  left: 50%;
+  opacity: 0;
+  padding: 6px 8px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  visibility: hidden;
+  white-space: nowrap;
+  z-index: 4;
+}
+
+.chart-bar .tipbox small {
+  color: var(--label2);
+}
+
+.chart-bar:hover .tipbox,
+.chart-bar:focus-visible .tipbox {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
+.stat-tile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.stat-tile header {
+  align-items: center;
+  color: var(--label2);
+  display: flex;
+  gap: 6px;
+}
+
+.stat-tile__value {
+  align-items: center;
+  color: var(--label);
+  display: flex;
+  font-size: 22px;
+  font-weight: 600;
+  gap: 6px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-tile[data-tone="claude"] .stat-tile__value {
+  color: var(--claude-text);
+}
+
+.stat-tile[data-tone="codex"] .stat-tile__value {
+  color: var(--codex-text);
+}
+
+.stat-tile[data-tone="warning"] .stat-tile__value {
+  color: var(--warn-text);
+}
+
+.stat-tile small {
+  color: var(--label2);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+@keyframes chart-rise {
+  from { height: 3px; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-bar {
+    animation: none;
+  }
+}

@@ -4,6 +4,16 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  isPermissionGranted,
+  requestPermission,
+} from "@tauri-apps/plugin-notification";
+import {
+  isGlassSupported,
+  setLiquidGlassEffect,
+} from "tauri-plugin-liquid-glass-api";
 import type { BridgeStatus } from "./bindings/BridgeStatus";
 import type { CodexDetection } from "./bindings/CodexDetection";
 import type { History } from "./bindings/History";
@@ -15,6 +25,21 @@ import type { Settings } from "./bindings/Settings";
 import type { SettingsState } from "./bindings/SettingsState";
 import type { UsageSnapshot } from "./bindings/UsageSnapshot";
 import type { WindowTarget } from "./bindings/WindowTarget";
+
+interface TauriWindow extends Window {
+  readonly __TAURI_INTERNALS__?: unknown;
+}
+
+export const isTauriRuntime = (): boolean =>
+  (window as TauriWindow).__TAURI_INTERNALS__ !== undefined;
+
+export const getCurrentWindowLabel = (): string => getCurrentWindow().label;
+
+export const isLiquidGlassSupported = (): Promise<boolean> =>
+  isGlassSupported();
+
+export const applyLiquidGlass = (cornerRadius: number): Promise<void> =>
+  setLiquidGlassEffect({ cornerRadius });
 
 export const getSnapshot = (): Promise<UsageSnapshot> =>
   invoke<UsageSnapshot>("get_snapshot");
@@ -61,6 +86,23 @@ export const showWindow = (
 
 export const hideWindow = (which: WindowTarget): Promise<null> =>
   invoke<null>("hide_window", { which });
+
+export const collapseToWidget = async (): Promise<void> => {
+  await showWindow("Widget");
+  await getCurrentWindow().hide();
+};
+
+export const expandFromWidget = async (): Promise<void> => {
+  await showWindow("Main", "Overview");
+  await hideWindow("Widget");
+};
+
+export const getAppVersion = (): Promise<string> => getVersion();
+
+export const requestNotificationAccess = async (): Promise<boolean> => {
+  if (await isPermissionGranted()) return true;
+  return await requestPermission() === "granted";
+};
 
 export const revealLogs = (): Promise<null> => invoke<null>("reveal_logs");
 

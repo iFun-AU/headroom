@@ -113,3 +113,11 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: own all four concrete sources under one cancellable source generation; replace that generation when a source input (`codex_path`, `codex_home`, `claude_dir`, the future OAuth toggle) or the bridge installation timestamp changes, while keeping the store, scheduler, settings, and effectiveness actors alive.
 - Why: paths and process discovery are immutable inputs to individual source loops. A bounded cancel-and-join restart applies them consistently, prevents split generations from observing different settings, and leaves accumulated store/history state intact. It is simpler and safer than teaching each watcher and process a separate reconfiguration protocol.
 - Evidence: `SourceSupervisor` derives every generation from the latest validated settings, ignores display/alert/onboarding changes, cancels and joins the prior generation before a relevant replacement, and the runtime owns the supervisor under the same three-second shutdown boundary as every other actor.
+
+## D-015 Use the system transparency preference with an explicit opaque fallback (2026-09-24, phase 8)
+
+- Context: the approved accessibility design requires opaque surfaces under Reduce Transparency, but browser rendering can prove only the CSS media query; the final behavior of that query in the native macOS 26 WKWebView still needs a person at the Mac.
+- Rule applied: DEVELOPMENT.md §0.1 “The step needs a human”.
+- Decision: implement both `prefers-reduced-transparency: reduce` and the same tokenized `.no-glass` fallback used when native Liquid Glass setup fails; do not add a second preference store or a JavaScript-only substitute.
+- Why: the webview follows the user's system preference when WKWebView exposes it, while the explicit class guarantees the identical opaque `--solid-win`/`--solid-card` rendering for plugin failure. A second setting could drift from macOS and would create an unnecessary source of truth.
+- Evidence: browser media emulation matches the query and computes `backdrop-filter: none`, no background image, and opaque token surfaces; the dedicated accessibility route and all state routes pass dark/light semantic checks. Native System Settings → Accessibility → Display verification remains on the handover checklist.
