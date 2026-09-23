@@ -1,6 +1,6 @@
 # Progress
 
-Current: Phase 8 — M7 UI
+Current: Phase 9 — M8 commit
 
 ## Phase 0 — Understand and prepare
 Status: committed (4504609)
@@ -199,7 +199,7 @@ Status: committed (dd5c209)
 - None.
 
 ## Phase 8 — UI (M7)
-Status: in progress
+Status: committed (aa50fa8)
 
 ### Tasks
 
@@ -219,6 +219,26 @@ Status: in progress
 - Diff review: all 51 M7 files were reviewed against §11 and the design package. Every screen, route, edge state, widget size and action is connected to generated types and typed IPC; debug data remains behind the development-only lazy route and is absent from the production bundle. Review fixed an async native-glass cleanup race, an incorrect “Today” fallback for old history, unknown-window labelling, invisible stale threshold glyphs, duplicate opacity writes, indefinite history loading after errors, a transient fake production version, and Codex account fixture dates. No fake chrome/wallpaper, network/storage dependency, raw component color literal, direct Tauri import outside `ipc.ts`, generated-binding drift, file over 400 lines, TODO, or unrelated contract/design edit remains.
 - Decisions: D-015 records the system Reduce Transparency query plus opaque failure fallback.
 - New handover items: inspect native Liquid Glass, dark/light switching and Reduce Transparency in WKWebView; compare each real window and widget over the desktop; confirm the native notification prompt appears only after the onboarding action. Browser-emulated screenshots and semantics already pass.
+
+### Blocked (hard stops only)
+
+- None.
+
+## Phase 9 — Hardening and local release (M8)
+Status: review complete; commit pending
+
+### Tasks
+
+- [x] T8.1 Automated leak and soak test — Goal: exercise the packaged release against isolated high-frequency Codex/Claude fixtures for 60 minutes and enforce every automated §14.3 pass criterion — Files: `scripts/soak.sh`, `scripts/soak-generator.mjs`, a narrowly gated native soak seam under `src-tauri/src/`, and `docs/{UNDERSTANDING,PROGRESS,DECISIONS}.md` — Acceptance: temp-only roots, one token line/provider per 100 ms, atomic bridge rewrites per 500 ms, real `ui_visible` scheduling every 30 s, per-minute footprint/child CSV, minute-10→60 growth <10%, 10-minute no-event CPU average <0.5%, zero application-controlled leaks, at most one owned app-server child, clean child exit, and secret-free isolated logs; the script exits non-zero on any failure — Verify: short explicit smoke first, then the default 60-minute run outside the command sandbox; inspect `target/soak/soak.csv`, leak/CPU/log evidence, and record final measurements in D-016–D-021 — Plan: split into a five-file temp-only harness/runtime batch and a six-file hidden-window energy/evidence batch so each stays within the eight-file limit; the app seam fails closed outside an absolute canonical temp root, skips launch-at-login mutation, and owns its visibility trigger under runtime cancellation — Result: pass. Review rejected the first run's 8.7 Hz post-write sleep cadence, so D-019 remains diagnostic; D-021's persistent 100 ms timer is authoritative. The corrected full run produced 35,508 lines/provider (9.86 Hz), 7,101 atomic bridge rewrites, 120 visibility triggers, one unchanged child across all 61 samples, 0.188% minute-10→60 footprint growth, 0.013% idle CPU, zero project leak roots, only D-018's 417 platform nodes, a clean secret scan, and clean app/child exit.
+- [x] T8.2 Universal local build — Goal: produce and ad-hoc sign the local-only universal app and sidecar — Files: existing build configuration/scripts plus progress/decision records if reality differs — Acceptance: both Rust targets installed, the sidecar and app build for `universal-apple-darwin`, both Mach-O executables report `x86_64 arm64`, and the bundle is ad-hoc signed; `/Applications`/GUI discovery work is handed over if it would cross the §0.1 hard-stop boundary — Verify: the exact build, `lipo -archs`, and `codesign --verify` commands from §13 M8 — Plan: use the already-installed `aarch64-apple-darwin` and `x86_64-apple-darwin` standard libraries, keep all outputs ignored under `target/` and `src-tauri/binaries/`, make no source change unless the exact commands expose one, then verify the actual workspace-target bundle path and record any documented-path difference — Result: pass after D-020 retained both architecture-suffixed sidecars for Tauri's per-slice builds; both Rust targets are installed, the exact universal command produced the `.app` and DMG outside the macOS packaging sandbox, app and bundled sidecar both report `x86_64 arm64`, and deep ad-hoc signing plus strict verification pass. Bundle: `target/universal-apple-darwin/release/bundle/macos/How Is It.app`; `/Applications` copy and no-terminal PATH discovery remain handover items because they cross the real-files hard stop.
+- [x] T8.3 README — Goal: document local installation and operating boundaries accurately — Files: `README.md`, `docs/PROGRESS.md` — Acceptance: install, notification permission, Claude bridge mutation/uninstall behavior, project/organization override caveat, tested Codex compatibility, and “local build only” are explicit — Verify: cross-check against §§2, 8.3, 13 M8, and 16; link/command audit — Plan: write one operator-focused root README from verified code/spec facts, include the actual workspace bundle path and exact safe commands, distinguish automatic reads from opt-in mutation, and avoid duplicating the internal implementation guide — Result: pass; README covers the macOS 26+/local-only boundary, universal build/sign/install commands, notification permission recovery, tested Codex/Claude versions and experimental fallback behavior, automatic read boundaries, explicit bridge mutation/backup/chaining/safe-uninstall semantics, project/organization precedence, daily operation and diagnostics. Required-term, local-link, command, diff and full workspace checks pass.
+
+### Review
+
+- Checks: corrected 60-minute packaged-release soak ✅ (35,508 lines/provider, 7,101 atomic bridge rewrites, 120 visibility triggers, one unchanged child, 0.188% footprint growth, 0.013% idle CPU, zero project leak roots, clean secret scan and clean process-tree exit) · clean `cargo llvm-cov -p usage-core --fail-under-lines 90` ✅ (96.31% lines) · Rust fmt ✅ strict workspace Clippy ✅ complete workspace/native FSEvents tests ✅ · UI typecheck ✅ lint ✅ production build ✅ · Node/Bash/POSIX-shell syntax ✅ · exact universal Tauri build ✅ app/sidecar `x86_64 arm64` ✅ deep ad-hoc signature verification ✅ · dependency, forbidden-construct, bounded-file, local-link and diff checks ✅.
+- Diff review: all 15 M8 files were read in full or as a complete tracked diff. Review rejected the first soak's post-write sleep because it sustained only 8.7 Hz; the persistent 100 ms generator now measures and enforces at least 95% of 10 Hz and the full corrected run passes. Review also found a misleading 85.49% coverage report caused by two stale instrumented crate hashes; cleaning only `llvm-cov` artifacts restored the exact gate, while two retained characterization tests now cover invalid/duplicate thresholds, custom Codex windows, absent reset times and reset-alert prerequisites. The soak seam fails closed outside a canonical child of the system temp directory, does not mutate launch-at-login, and its timer/processes share bounded runtime cancellation. Hidden windows stop clocks/events and fetch plus trigger refresh on presentation. No default OAuth, network/Keychain dependency, project `unsafe`, non-test unwrap/expect/panic/todo/debug macro, secret-shaped soak log, untracked build product, contract/design edit or unrelated change remains.
+- Decisions: D-016 through D-021. D-021 explicitly supersedes D-019's first-run acceptance evidence without rewriting append-only history. D-018 records the exact macOS 27 AppIntents leak-tool exception and keeps raw-zero target-macOS-26 verification open.
+- New handover items: `/Applications` copy and no-terminal PATH GUI smoke; the unchanged §14.4 manual script; real Codex/Claude/live-log checks; native Liquid Glass, dark/light and Reduce Transparency inspection; the eight-hour production-rate soak; Safari WebView memory; raw-zero `leaks` on macOS 26; optional owner-run T8.4 signing/notarization.
 
 ### Blocked (hard stops only)
 

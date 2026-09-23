@@ -33,24 +33,37 @@ export function useSnapshot(): SnapshotState {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
     const label = getCurrentWindowLabel();
+    let deferred: UsageSnapshot | undefined;
     const accept = (next: UsageSnapshot) => {
       if (cancelled) return;
+      if (document.visibilityState !== "visible") {
+        deferred = next;
+        return;
+      }
       setSnapshot(next);
       setLoading(false);
       setError(null);
     };
+    const fetchSnapshot = () => {
+      void getSnapshot().then(accept).catch((cause: unknown) => {
+        if (!cancelled) {
+          setLoading(false);
+          setError(errorMessage(cause));
+        }
+      });
+    };
     const reportVisible = () => {
       if (document.visibilityState === "visible") {
+        if (deferred !== undefined) {
+          const latest = deferred;
+          deferred = undefined;
+          accept(latest);
+        }
+        fetchSnapshot();
         void uiVisible(label).catch(() => undefined);
       }
     };
 
-    void getSnapshot().then(accept).catch((cause: unknown) => {
-      if (!cancelled) {
-        setLoading(false);
-        setError(errorMessage(cause));
-      }
-    });
     void onUsageUpdated(accept).then((dispose) => {
       if (cancelled) dispose();
       else unlisten = dispose;

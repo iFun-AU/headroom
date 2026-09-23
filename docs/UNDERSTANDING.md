@@ -27,8 +27,8 @@ Source priority is explicit through `SourceKind::limit_priority`; lower is more 
 3. The lenient app-server DTO parser applies the `limitId == "codex"` filter, classifies windows by duration, and creates a strict `Reading`.
 4. The source sends a bounded `SourceEvent::Reading` to the `UsageStore` actor.
 5. The store ingests that source independently, applies full/partial and ordering rules, derives a `UsageSnapshot`, and updates its watch channel only when the snapshot changes.
-6. The Tauri forwarder coalesces updates to at most one per 250 ms, emits `usage-updated`, and updates the tray text/icon only when needed.
-7. `ui/src/ipc.ts` owns the typed Tauri listener; `useSnapshot` updates React state and the dashboard, popover and widget re-render from the generated Rust bindings.
+6. The Tauri forwarder coalesces updates to at most one per 250 ms, updates the tray text/icon only when needed, and emits `usage-updated` only to native windows that are visible.
+7. `ui/src/ipc.ts` owns the typed Tauri listener; `useSnapshot` updates React state while visible and fetches the latest snapshot when a hidden dashboard, popover or widget is shown again.
 
 A rollout-file event follows the same parser → bounded `SourceEvent` → store path and additionally triggers an app-server refresh so independent Codex activity is reconciled. (`DEVELOPMENT.md` §§2.1, 3.1–3.3, 8.1–8.2, 9.1, 10.3–10.4.)
 

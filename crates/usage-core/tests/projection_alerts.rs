@@ -263,3 +263,103 @@ fn downward_change_does_not_fire_and_expired_dedupe_state_is_pruned() {
     );
     assert_eq!(tracker.retained_firings(), 0);
 }
+
+#[test]
+fn thresholds_are_validated_deduplicated_and_label_custom_codex_windows() {
+    let mut tracker = AlertTracker::new();
+    let kind = WindowKind::Other { minutes: 30 };
+    let below = snapshot(
+        Vec::new(),
+        vec![limit_window(kind, 70.0, None, SourceKind::CodexAppServer)],
+    );
+    let crossed = snapshot(
+        Vec::new(),
+        vec![limit_window(kind, 90.0, None, SourceKind::CodexAppServer)],
+    );
+
+    assert!(
+        tracker
+            .evaluate(&below, &[0, 75, 75, 90, 101], UnixSeconds(100))
+            .is_empty()
+    );
+    let alerts = tracker.evaluate(&crossed, &[0, 75, 75, 90, 101], UnixSeconds(110));
+    assert_eq!(alerts.len(), 2);
+    assert_eq!(alerts[0].title, "Codex 30-minute limit at 75%");
+    assert_eq!(alerts[0].body, "Reset time unavailable");
+    assert_eq!(alerts[1].title, "Codex 30-minute limit at 90%");
+    assert_eq!(alerts[1].body, "Reset time unavailable");
+    assert_eq!(tracker.retained_firings(), 2);
+
+    assert!(
+        tracker
+            .evaluate(
+                &snapshot(Vec::new(), Vec::new()),
+                &[75, 90],
+                UnixSeconds(120),
+            )
+            .is_empty()
+    );
+    assert_eq!(tracker.retained_firings(), 0);
+}
+
+#[test]
+fn reset_alert_requires_heavy_prior_usage_and_a_later_reset() {
+    let mut tracker = AlertTracker::new();
+    let below_reset_threshold = snapshot(
+        Vec::new(),
+        vec![limit_window(
+            WindowKind::Weekly,
+            89.0,
+            Some(1_000),
+            SourceKind::CodexAppServer,
+        )],
+    );
+    let later_but_not_heavy = snapshot(
+        Vec::new(),
+        vec![limit_window(
+            WindowKind::Weekly,
+            95.0,
+            Some(2_000),
+            SourceKind::CodexAppServer,
+        )],
+    );
+    let unchanged_reset = snapshot(
+        Vec::new(),
+        vec![limit_window(
+            WindowKind::Weekly,
+            96.0,
+            Some(2_000),
+            SourceKind::CodexAppServer,
+        )],
+    );
+    let valid_reset = snapshot(
+        Vec::new(),
+        vec![limit_window(
+            WindowKind::Weekly,
+            1.0,
+            Some(3_000),
+            SourceKind::CodexAppServer,
+        )],
+    );
+
+    assert!(
+        tracker
+            .evaluate(&below_reset_threshold, &[], UnixSeconds(100))
+            .is_empty()
+    );
+    assert!(
+        tracker
+            .evaluate(&later_but_not_heavy, &[], UnixSeconds(110))
+            .is_empty()
+    );
+    assert!(
+        tracker
+            .evaluate(&unchanged_reset, &[], UnixSeconds(120))
+            .is_empty()
+    );
+    let alerts = tracker.evaluate(&valid_reset, &[], UnixSeconds(130));
+    assert_eq!(alerts.len(), 1);
+    assert_eq!(alerts[0].kind, AlertKind::Reset);
+    assert_eq!(alerts[0].title, "Codex weekly limit reset");
+    assert_eq!(alerts[0].body, "A new usage window has started");
+}

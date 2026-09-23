@@ -17,6 +17,7 @@ pub mod logging;
 pub mod runtime;
 /// Versioned application settings and persistence.
 pub mod settings;
+mod soak;
 /// Native menu-bar tray and presentation state.
 pub mod tray;
 /// Native window lifecycle and floating-widget placement.
@@ -59,8 +60,12 @@ pub fn run() -> tauri::Result<()> {
             commands::ui_visible,
         ])
         .setup(|app| {
-            let home = app.path().home_dir()?;
-            let data = app.path().data_dir()?;
+            let soak_mode = soak::SoakMode::from_environment()?;
+            let (home, data) = if let Some(mode) = &soak_mode {
+                mode.platform_roots()
+            } else {
+                (app.path().home_dir()?, app.path().data_dir()?)
+            };
             let executable = std::env::current_exe()?;
             let executable_dir = executable
                 .parent()
@@ -76,7 +81,8 @@ pub fn run() -> tauri::Result<()> {
                 return Err(io::Error::other("logging guard was already managed").into());
             }
             let initial = settings::load_settings(&roots.settings_path())?;
-            if !initial.read_only
+            if soak_mode.is_none()
+                && !initial.read_only
                 && let Err(error) = commands::converge_autostart(app.handle(), &initial.settings)
             {
                 warn!(error = %log_trunc(&error), "could not synchronize launch-at-login state");
@@ -87,6 +93,7 @@ pub fn run() -> tauri::Result<()> {
                 roots,
                 initial,
                 window_events,
+                soak_mode,
             ));
             if !app.manage(runtime) {
                 return Err(io::Error::other("runtime state was already managed").into());

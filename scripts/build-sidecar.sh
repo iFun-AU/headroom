@@ -23,9 +23,15 @@ if [ "$target_triple" = "universal-apple-darwin" ]; then
   intel_target="x86_64-apple-darwin"
   cargo build --release -p statusline-bridge --target "$arm_target"
   cargo build --release -p statusline-bridge --target "$intel_target"
-  lipo -create \
+  install -m 755 \
     "$repo_dir/target/$arm_target/release/$binary_name" \
+    "$output_dir/$binary_name-$arm_target"
+  install -m 755 \
     "$repo_dir/target/$intel_target/release/$binary_name" \
+    "$output_dir/$binary_name-$intel_target"
+  lipo -create \
+    "$output_dir/$binary_name-$arm_target" \
+    "$output_dir/$binary_name-$intel_target" \
     -output "$output_dir/$binary_name-$target_triple"
 else
   cargo build --release -p statusline-bridge --target "$target_triple"

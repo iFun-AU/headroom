@@ -2,7 +2,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
@@ -60,7 +60,7 @@ pub async fn forward_snapshots<F>(
     }
 }
 
-/// Emits throttled `usage-updated` events to all windows.
+/// Updates the tray and emits throttled usage events only to visible windows.
 pub async fn run_usage_events(
     app: AppHandle,
     snapshots: watch::Receiver<Arc<UsageSnapshot>>,
@@ -68,11 +68,29 @@ pub async fn run_usage_events(
 ) {
     forward_snapshots(snapshots, cancel, move |snapshot| {
         tray::update(&app, &snapshot);
-        if let Err(error) = app.emit("usage-updated", &*snapshot) {
-            warn!(error = %log_trunc(&error.to_string()), "could not emit usage update");
-        }
+        emit_usage_to_visible_windows(&app, &snapshot);
     })
     .await;
+}
+
+fn emit_usage_to_visible_windows(app: &AppHandle, snapshot: &UsageSnapshot) {
+    for label in ["main", "popover", "widget"] {
+        let Some(window) = app.get_webview_window(label) else {
+            warn!(window = label, "usage window is unavailable");
+            continue;
+        };
+        match window.is_visible() {
+            Ok(true) => {
+                if let Err(error) = window.emit("usage-updated", snapshot) {
+                    warn!(window = label, error = %log_trunc(&error.to_string()), "could not emit usage update");
+                }
+            }
+            Ok(false) => {}
+            Err(error) => {
+                warn!(window = label, error = %log_trunc(&error.to_string()), "could not read usage window visibility");
+            }
+        }
+    }
 }
 
 /// Emits every persisted `settings-changed` state transition.

@@ -29,6 +29,7 @@ use usage_sources::{
 use crate::{
     forwarder,
     settings::{Settings, SettingsHandle, SettingsState},
+    soak::SoakMode,
     windows::WindowEvents,
 };
 
@@ -123,11 +124,12 @@ pub struct RuntimeState {
 
 impl RuntimeState {
     /// Starts the bounded actor graph and source/forwarder supervisors.
-    pub async fn start(
+    pub(crate) async fn start(
         app: AppHandle,
         roots: RuntimeRoots,
         initial: SettingsState,
         window_events: WindowEvents,
+        soak_mode: Option<SoakMode>,
     ) -> Self {
         let settings_value = initial.settings.clone();
         let (settings, settings_actor) =
@@ -193,6 +195,8 @@ impl RuntimeState {
             roots.clone(),
             settings.clone(),
             window_events,
+            scheduler.clone(),
+            soak_mode,
         );
         shutdown.set_task(supervisor);
 
@@ -312,6 +316,8 @@ fn spawn_supervisor(
     roots: RuntimeRoots,
     settings: SettingsHandle,
     window_events: WindowEvents,
+    scheduler: Scheduler,
+    soak_mode: Option<SoakMode>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let mut tasks = JoinSet::new();
@@ -319,6 +325,9 @@ fn spawn_supervisor(
         tasks.spawn(scheduler_actor.run(cancel.child_token()));
         tasks.spawn(store_actor.run(cancel.child_token()));
         tasks.spawn(effectiveness_actor.run(cancel.child_token()));
+        if let Some(soak_mode) = soak_mode {
+            tasks.spawn(soak_mode.run(scheduler, cancel.child_token()));
+        }
         tasks.spawn(sources.run(cancel.child_token()));
         tasks.spawn(forwarder::run_usage_events(
             app.clone(),
