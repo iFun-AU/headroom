@@ -98,4 +98,4 @@ npm --prefix ui run lint
 npm --prefix ui run build
 ```
 
-Implementation details, verified data shapes, and acceptance criteria are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Recorded deviations and evidence are in [docs/DECISIONS.md](docs/DECISIONS.md).
+Implementation details, verified data shapes, and acceptance criteria are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Recorded deviations and evidence are in [docs/DECISIONS.md](docs/DECISIONS.md). Human-only installation, live-provider, native-UI, eight-hour soak, and optional distribution checks are in [docs/HANDOVER.md](docs/HANDOVER.md).

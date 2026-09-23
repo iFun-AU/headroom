@@ -1,6 +1,6 @@
 # Progress
 
-Current: Phase 9 — M8 commit
+Current: implementation complete — owner acceptance pending in docs/HANDOVER.md
 
 ## Phase 0 — Understand and prepare
 Status: committed (4504609)
@@ -225,7 +225,7 @@ Status: committed (aa50fa8)
 - None.
 
 ## Phase 9 — Hardening and local release (M8)
-Status: review complete; commit pending
+Status: committed (24989a4)
 
 ### Tasks
 
@@ -243,3 +243,30 @@ Status: review complete; commit pending
 ### Blocked (hard stops only)
 
 - None.
+
+## Phase 10 — Handover and final Definition of Done
+Status: committed (v1.0.0-local)
+
+### Tasks
+
+- [x] P10.1 Handover checklist and DoD audit — Goal: walk DEVELOPMENT.md §15 item by item and preserve every human-only acceptance step with exact instructions and expected results — Files: `docs/HANDOVER.md`, `README.md`, `docs/PROGRESS.md` — Acceptance: §14.4 appears unchanged and in order; eight-hour soak, Safari WebView memory, every live ⚠ VERIFY, native design inspection, real-log secret check, `/Applications` GUI smoke, raw-zero macOS 26 leak check and optional owner-run T8.4 are explicit; every automatable DoD item is reverified — Verify: checklist/content audit against §§14.3–15, local link/command audit, final full gates and artifact checks — Plan: one three-file documentation batch; preserve real user data and owner credentials for human acceptance — Result: pass for all agent-run items. The ten §14.4 checkbox lines compare byte-for-byte with the contract; the handover orders all required categories and gives instructions plus expected results, with explicit PID selection before the child kill test. README links resolve. Final Rust/UI/native bundle gates pass. Real `/Applications`, provider, log, target-macOS-26 and optional credential work is listed as unchecked owner acceptance.
+- [x] P10.2 Final review, commit and tag — Goal: leave one auditable handover commit and the requested local-v1 tag — Files: Phase 10 documentation only plus Git metadata — Acceptance: review record complete, staged diff contains no implementation/spec/design/build-output changes, commit is present, `v1.0.0-local` points to it, and the worktree is clean — Verify: staged diff check/read, `git log -1 --stat`, `git show-ref --tags`, `git status --short` — Result: the complete staged handover diff contains only the three documented Phase 10 files and passes whitespace review; the commit and tag follow this record.
+
+### Definition of Done audit (DEVELOPMENT.md §15)
+
+- M0–M8 and all automatable Verify steps: pass; phases 0–9 each have a review and one commit, ending with M8 `24989a4`.
+- Required accelerated soak: pass at 9.86 Hz/provider, 0.188% footprint growth, 0.013% idle CPU and one owned child; D-021 supersedes the under-rate first run. Raw `leaks` on this macOS 27 host has zero project roots and only D-018's exact AppIntents cycles (417 objects). The contract's literal raw-zero check remains open for target macOS 26.
+- Handover: exists; all ten §14.4 lines are unchanged and in order, followed by eight-hour/Safari, live ⚠ VERIFY/real-log, native look, and optional T8.4 instructions.
+- Static/build quality: `cargo fmt`, strict workspace Clippy, complete workspace tests, `usage-core` 96.31% clean line coverage, UI TypeScript/ESLint/build, syntax checks, no production unsafe or unwrap/expect, no v1 OAuth feature/`reqwest`/`security-framework`, dual-architecture app and sidecar, and strict deep ad-hoc signature verification all pass.
+- Secrets and documentation: the isolated soak logs have no secret-shaped matches; the real `~/Library/Logs/dev.howisit.app` scan remains an explicit owner check because it crosses the §0.1 real-data hard stop. README covers installation, notification permission, Claude bridge mutation/uninstall/override, and local-only use.
+
+### Review
+
+- Checks: final full Rust/UI/native artifact gate ✅ · clean core coverage 96.31% ✅ · byte-for-byte §14.4 checkbox diff ✅ · README/handover link and command audit ✅ · documentation diff check ✅.
+- Diff review: handover and README were read against §§14.3–15 and prior progress records. The process-kill example now requires explicit app/child PID confirmation; the Codex rename example selects the temporary symlink before moving it. All three Phase 10 files are documentation only, below 400 lines individually; contract/design and build outputs remain untouched.
+- Decisions: D-018 and D-021 are carried through precisely. Live ⚠ VERIFY items remain open in the handover, including Codex account shape, older `resets_in_seconds`, native Reduce Transparency, and the excluded post-v1 OAuth gate.
+- New handover items: see the consolidated `docs/HANDOVER.md` checklist in its required order.
+
+### Blocked (hard stops only)
+
+- None; human-only/real-data/credential work is deliberately documented rather than executed.
