@@ -4,5 +4,6 @@ dist/
 .DS_Store
 *.log
 src-tauri/binaries/
+src-tauri/gen/schemas/
 .env*
 docs/design/source/__pycache__/

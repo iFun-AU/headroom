@@ -1,0 +1,12 @@
+[package]
+name = "statusline-bridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "howisit-statusline"
+path = "src/main.rs"
+
+[lints]
+workspace = true
