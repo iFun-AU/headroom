@@ -1,0 +1,382 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-09-23T03:49:33Z"
+ },
+ "title": "How Is It — macOS Usage Monitor",
+ "launch": {
+  "view": "canvas",
+  "page": "main"
+ },
+ "pages": [
+  {
+   "id": "main",
+   "name": "Main window"
+  },
+  {
+   "id": "menubar",
+   "name": "Menu bar & widget"
+  },
+  {
+   "id": "settings",
+   "name": "Settings"
+  },
+  {
+   "id": "onboarding",
+   "name": "Onboarding"
+  },
+  {
+   "id": "states",
+   "name": "States"
+  },
+  {
+   "id": "system",
+   "name": "Components & tokens"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Overview — Dark",
+   "page": "main",
+   "is_interactive": true
+  },
+  "DetailClaudeDark.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Claude tab — Dark",
+   "page": "main"
+  },
+  "DetailCodexDark.dc.html": {
+   "x": 2720,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Codex tab — Dark",
+   "page": "main"
+  },
+  "OverviewLight.dc.html": {
+   "x": 0,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Overview — Light",
+   "page": "main",
+   "is_interactive": true
+  },
+  "DetailClaudeLight.dc.html": {
+   "x": 1360,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Claude tab — Light",
+   "page": "main"
+  },
+  "DetailCodexLight.dc.html": {
+   "x": 2720,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Codex tab — Light",
+   "page": "main"
+  },
+  "MenuBarDark.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Menu bar & popover — Dark",
+   "page": "menubar"
+  },
+  "WidgetDark.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Floating widget — Dark",
+   "page": "menubar"
+  },
+  "MenuBarLight.dc.html": {
+   "x": 0,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Menu bar & popover — Light",
+   "page": "menubar"
+  },
+  "WidgetLight.dc.html": {
+   "x": 1360,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Floating widget — Light",
+   "page": "menubar"
+  },
+  "SettingsAccountsDark.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Accounts — Dark",
+   "page": "settings"
+  },
+  "SettingsAccountsLight.dc.html": {
+   "x": 0,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Accounts — Light",
+   "page": "settings"
+  },
+  "SettingsDisplayDark.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Display — Dark",
+   "page": "settings"
+  },
+  "SettingsDisplayLight.dc.html": {
+   "x": 1360,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Display — Light",
+   "page": "settings"
+  },
+  "SettingsAlertsDark.dc.html": {
+   "x": 2720,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Alerts — Dark",
+   "page": "settings"
+  },
+  "SettingsAlertsLight.dc.html": {
+   "x": 2720,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Alerts — Light",
+   "page": "settings"
+  },
+  "SettingsRefreshDark.dc.html": {
+   "x": 4080,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Refresh — Dark",
+   "page": "settings"
+  },
+  "SettingsRefreshLight.dc.html": {
+   "x": 4080,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Refresh — Light",
+   "page": "settings"
+  },
+  "SettingsDiagnosticsDark.dc.html": {
+   "x": 5440,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Diagnostics — Dark",
+   "page": "settings"
+  },
+  "SettingsDiagnosticsLight.dc.html": {
+   "x": 5440,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · Diagnostics — Light",
+   "page": "settings"
+  },
+  "SettingsReadOnlyDark.dc.html": {
+   "x": 6800,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "Settings · read-only banner — Dark",
+   "page": "settings"
+  },
+  "OnboardingDark.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 2360,
+   "h": 800,
+   "title": "Onboarding — Dark",
+   "page": "onboarding"
+  },
+  "OnboardingLight.dc.html": {
+   "x": 0,
+   "y": 1200,
+   "w": 2360,
+   "h": 800,
+   "title": "Onboarding — Light",
+   "page": "onboarding"
+  },
+  "StatesDark.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1932,
+   "h": 1610,
+   "title": "States — Dark",
+   "page": "states",
+   "is_interactive": true
+  },
+  "StatesLight.dc.html": {
+   "x": 2012,
+   "y": 0,
+   "w": 1932,
+   "h": 1610,
+   "title": "States — Light",
+   "page": "states",
+   "is_interactive": true
+  },
+  "ComponentsDark.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1680,
+   "h": 1560,
+   "title": "Component sheet — Dark",
+   "page": "system"
+  },
+  "ComponentsLight.dc.html": {
+   "x": 1760,
+   "y": 0,
+   "w": 1680,
+   "h": 1560,
+   "title": "Component sheet — Light",
+   "page": "system"
+  },
+  "Tokens.dc.html": {
+   "x": 3520,
+   "y": 0,
+   "w": 1680,
+   "h": 1520,
+   "title": "Color & material tokens",
+   "page": "system"
+  },
+  "Accessibility.dc.html": {
+   "x": 3520,
+   "y": 1640,
+   "w": 1680,
+   "h": 1060,
+   "title": "Accessibility",
+   "page": "system"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "DetailClaudeDark.dc.html",
+  "DetailCodexDark.dc.html",
+  "OverviewLight.dc.html",
+  "DetailClaudeLight.dc.html",
+  "DetailCodexLight.dc.html",
+  "MenuBarDark.dc.html",
+  "WidgetDark.dc.html",
+  "MenuBarLight.dc.html",
+  "WidgetLight.dc.html",
+  "SettingsAccountsDark.dc.html",
+  "SettingsAccountsLight.dc.html",
+  "SettingsDisplayDark.dc.html",
+  "SettingsDisplayLight.dc.html",
+  "SettingsAlertsDark.dc.html",
+  "SettingsAlertsLight.dc.html",
+  "SettingsRefreshDark.dc.html",
+  "SettingsRefreshLight.dc.html",
+  "SettingsDiagnosticsDark.dc.html",
+  "SettingsDiagnosticsLight.dc.html",
+  "SettingsReadOnlyDark.dc.html",
+  "OnboardingDark.dc.html",
+  "OnboardingLight.dc.html",
+  "StatesDark.dc.html",
+  "StatesLight.dc.html",
+  "ComponentsDark.dc.html",
+  "ComponentsLight.dc.html",
+  "Tokens.dc.html",
+  "Accessibility.dc.html"
+ ],
+ "notes": {
+  "mainDark": {
+   "x": 0,
+   "y": -300,
+   "text": "Main window · Dark",
+   "kind": "title1",
+   "maxW": 4000,
+   "page": "main"
+  },
+  "mainLight": {
+   "x": 0,
+   "y": 900,
+   "text": "Main window · Light",
+   "kind": "title1",
+   "maxW": 4000,
+   "page": "main"
+  },
+  "mbDark": {
+   "x": 0,
+   "y": -300,
+   "text": "Menu bar & floating widget · Dark",
+   "kind": "title1",
+   "maxW": 2640,
+   "page": "menubar"
+  },
+  "mbLight": {
+   "x": 0,
+   "y": 900,
+   "text": "Menu bar & floating widget · Light",
+   "kind": "title1",
+   "maxW": 2640,
+   "page": "menubar"
+  },
+  "setDark": {
+   "x": 0,
+   "y": -300,
+   "text": "Settings route · Dark",
+   "kind": "title1",
+   "maxW": 8080,
+   "page": "settings"
+  },
+  "setLight": {
+   "x": 0,
+   "y": 900,
+   "text": "Settings route · Light",
+   "kind": "title1",
+   "maxW": 6720,
+   "page": "settings"
+  },
+  "onb": {
+   "x": 0,
+   "y": -300,
+   "text": "Onboarding route · Dark and Light",
+   "kind": "title1",
+   "maxW": 2360,
+   "page": "onboarding"
+  },
+  "states": {
+   "x": 0,
+   "y": -300,
+   "text": "Card states · Dark and Light",
+   "kind": "title1",
+   "maxW": 3944,
+   "page": "states"
+  },
+  "system": {
+   "x": 0,
+   "y": -300,
+   "text": "Components, tokens & accessibility",
+   "kind": "title1",
+   "maxW": 5200,
+   "page": "system"
+  }
+ },
+ "designSystems": []
+}

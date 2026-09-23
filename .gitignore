@@ -1,0 +1,8 @@
+target/
+node_modules/
+dist/
+.DS_Store
+*.log
+src-tauri/binaries/
+.env*
+docs/design/source/__pycache__/
