@@ -1,6 +1,6 @@
 # Progress
 
-Current: Phase 3 — M2 parsers
+Current: Phase 4 — M3 status-line bridge
 
 ## Phase 0 — Understand and prepare
 Status: committed (4504609)
@@ -72,7 +72,7 @@ Status: committed (7163e95)
 - None.
 
 ## Phase 3 — Parsers (M2)
-Status: review
+Status: committed (bf538a9)
 
 ### Tasks
 
@@ -91,6 +91,30 @@ Status: review
 - Diff review: all parser sources and tests re-read; every external DTO field is optional with serde defaults and unknown fields remain accepted. Appendix A.1–A.4 and A.6 files compare byte-for-byte with their documentation code blocks. Codex limit IDs are filtered before readings, token deltas remain independent of that filter and per-file state is explicit. Claude duplicates retain a stable key for store dedupe, arithmetic is checked, malformed JSON returns typed errors, and no parser performs I/O, logs secrets, panics, or exceeds 400 lines.
 - Decisions: D-007 records the raw-status-line versus persisted-bridge shape ambiguity and the additive parser behavior.
 - New handover items: none; M2 is fully fixture/pure-logic verifiable.
+
+### Blocked (hard stops only)
+
+- None.
+
+## Phase 4 — Status-line bridge (M3)
+Status: review
+
+### Tasks
+
+- [x] T3.1 Synchronous bridge fast path — Goal: accept bounded Claude status-line stdin, atomically persist the documented schema-1 bridge file, and emit the compact fallback text without ever failing Claude Code — Files: `crates/statusline-bridge/{Cargo.toml,src/**,tests/basic.rs}` (split to keep resource and process logic small) — Acceptance: only `serde_json` and `tempfile` are runtime dependencies; input is capped at 4 MiB; a temp `--out-dir` run prints `5h 24% · 7d 41%`, writes valid complete JSON with verbatim rate limits, and exits 0; invalid/oversized input exits 0 silently — Verify: test-first binary integration coverage, the exact §13 command in a temp directory, and standard workspace gates — Result: 2 binary tests pass; the exact temp probe prints `5h 24% · 7d 41%`, `jq` validates the schema/session/time and verbatim window object, invalid and >4 MiB inputs exit 0 silently, atomic writes use unique same-directory temp files plus `sync_all`, and full fmt/strict Clippy/workspace tests pass.
+- [x] T3.2 Chained status line — Goal: forward the original stdin to an existing configured command, return its stdout verbatim, and kill it at the hard two-second deadline after the bridge file is already durable — Files: bridge process module and focused tempdir tests — Acceptance: `cat >/dev/null; echo CHAINED` returns `CHAINED`; `sleep 5` finishes in 2.0–2.3 seconds with the rate-limit file present; child stdio cannot deadlock — Verify: red/green integration tests, the two §13 shell probes, and standard workspace gates — Result: 2 focused chain tests pass; the exact command returned `CHAINED`, the direct-binary sleep probe returned in 2.01 s, and `jq` confirmed the bridge file was already valid; stdin/stdout workers avoid pipe deadlock, stderr is discarded, timeout kills/reaps the child, and full task gates pass.
+- [x] T3.3 Overlap safety and performance — Goal: prove atomic last-writer-wins behavior, abandoned-temp cleanup, and the unchained latency budget under realistic process concurrency — Files: `crates/statusline-bridge/tests/{concurrency.rs,budget.rs}` plus minimal production fixes — Acceptance: 50 overlapping invocations with every fifth killed leave a valid target; startup cleanup removes stale `.tmp*`; 100 release runs have p95 <20 ms — Verify: debug concurrency test, `cargo test --release -p statusline-bridge`, and standard workspace gates — Result: synchronized 50-process overlap with 10 varied kill attempts leaves a valid schema-1 target and at most one temp per killed writer; future-time startup cleanup removes all abandoned temp files; 100 optimized invocations pass the p95 <20 ms assertion; release and full workspace gates pass.
+
+### Phase review and commit
+
+- [x] Goal: leave M3 synchronous, bounded, atomic, and isolated from real user paths — Files: Phase 4 changes only — Acceptance: no async runtime or extra dependency, no real Application Support access in verification, no panic/output on failure, and all child/temp resources are reaped or cleaned — Verify: fmt, strict workspace Clippy/tests, release M3 tests, dependency/diff/resource review, commit, `git log -1 --stat`, clean status — Result: all automated gates through the pre-commit review pass; commit follows this record.
+
+### Review
+
+- Checks: exact fast-path/invalid/chain/sleep temp probes ✅ · `cargo fmt --all -- --check` ✅ · workspace Clippy with `-D warnings` ✅ · workspace tests ✅ (6 M3 integration tests, none skipped) · `cargo test --release -p statusline-bridge` ✅ (100-process p95 <20 ms assertion, 50-process overlap, process-group timeout) · direct dependency tree exactly `serde_json` + `tempfile` ✅ · `git diff --check` ✅.
+- Diff review: every M3 source/test file re-read; stdin is capped at 4 MiB, rate limits are copied semantically unchanged into a unique same-directory temp file, `sync_all` precedes atomic persistence, startup cleanup targets only hour-old `.tmp*` regular files, and all verification paths use tempdirs. Review caught and fixed an unbounded chained-stdout `Vec` and shell-only timeout: stdout now spools to an anonymous temp file, and the whole isolated process group is killed/reaped before the 2.3 s ceiling. No async runtime, panic/unwrap/unsafe in production, real user-data access, secret output, leaked child, or file over 400 lines remains.
+- Decisions: D-008 resolves the broad `dirs` table versus M3's explicit two-dependency rule in favor of the task-specific contract.
+- New handover items: none; native installer consent and real Claude effectiveness remain later M5/manual acceptance work, not M3 bridge gaps.
 
 ### Blocked (hard stops only)
 

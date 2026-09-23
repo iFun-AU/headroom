@@ -57,3 +57,11 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 - Decision: keep one lenient parser that accepts both field names; use `writtenAt` when present and otherwise require the caller to supply the observation time used for raw fixture/probe parsing.
 - Why: the production source can parse exactly what the bridge persists, the required documented fixture remains executable, and both paths normalize into the same strict full `Reading` without another public DTO or inferred timestamp.
 - Evidence: `claude_statusline_parser` verifies Appendix A.4 and a schema-1 persisted envelope independently, including timestamp precedence and independently missing windows.
+
+## D-008 Keep the bridge binary to its explicit two dependencies (2026-09-23, phase 4)
+
+- Context: DEVELOPMENT.md §4.1 broadly lists `dirs` for “sources, bridge”, while the more specific §8.3 and T3.1 requirements say the synchronous status-line bridge has `serde_json` and `tempfile` only.
+- Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail”, resolved in favor of the task-specific acceptance rule.
+- Decision: the bridge binary derives `~/Library/Application Support/dev.howisit.app` from `HOME` using `std` and directly depends only on `serde_json` and `tempfile`; the later `usage-sources` path module may use `dirs` as specified.
+- Why: this meets T3.1 literally, keeps the latency-sensitive process small, and avoids a third runtime dependency for one fixed macOS path. A missing `HOME` is suppressed like every other bridge error so Claude Code is never disrupted.
+- Evidence: `cargo tree -p statusline-bridge --depth 1` shows exactly the two required direct dependencies, and every M3 integration test supplies a temporary `--out-dir` rather than resolving a real user path.
