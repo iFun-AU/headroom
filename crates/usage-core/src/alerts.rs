@@ -7,9 +7,18 @@ use crate::{Percent, Provider, UnixSeconds, UsageSnapshot, WindowKind};
 type WindowKey = (Provider, WindowKind);
 type FiringKey = (Provider, WindowKind, u8, Option<UnixSeconds>);
 
+/// Readings older than this never move the alert baseline (matches merge freshness).
+const FRESH_SECONDS: i64 = 15 * 60;
+/// Reset times this close describe the same window. Claude's status line and
+/// usage API report the same reset up to a second apart, so exact comparison
+/// would mistake a source switch for a new window.
+const SAME_RESET_TOLERANCE_SECONDS: i64 = 5 * 60;
+
 #[derive(Debug, Clone, Copy)]
 struct PreviousWindow {
     used: Percent,
+    /// The first reset time reported for this window, kept while later
+    /// readings stay within [`SAME_RESET_TOLERANCE_SECONDS`] of it.
     resets_at: Option<UnixSeconds>,
 }
 
@@ -50,7 +59,10 @@ impl AlertTracker {
     /// Compares a snapshot with the previous snapshot and returns newly fired alerts.
     ///
     /// Thresholds outside 1 through 100 are ignored, and duplicate thresholds are
-    /// evaluated once. The first snapshot establishes a baseline without alerting.
+    /// evaluated once. The first fresh reading of a window establishes a baseline
+    /// without alerting. Stale readings and windows whose reset passed without a
+    /// fresh reading keep the previous baseline instead of replacing it, so a
+    /// restart that briefly shows old data cannot re-fire crossed thresholds.
     #[must_use]
     pub fn evaluate(
         &mut self,
@@ -70,12 +82,19 @@ impl AlertTracker {
         for usage in [&snapshot.claude, &snapshot.codex] {
             for window in &usage.windows {
                 let key = (usage.provider, window.kind);
+                let previous = self.previous.get(&key).copied();
+                if window.reset_pending || !is_fresh(window.observed_at, now) {
+                    if let Some(previous) = previous {
+                        next.insert(key, previous);
+                    }
+                    continue;
+                }
                 let current = PreviousWindow {
                     used: window.used,
-                    resets_at: window.resets_at,
+                    resets_at: canonical_reset(previous, window.resets_at),
                 };
-                if let Some(previous) = self.previous.get(&key).copied() {
-                    self.detect_reset(key, previous, current, &mut alerts);
+                if let Some(previous) = previous {
+                    self.detect_reset(key, previous, current, now, &mut alerts);
                     self.detect_thresholds(key, previous, current, &thresholds, &mut alerts);
                 }
                 next.insert(key, current);
@@ -93,18 +112,24 @@ impl AlertTracker {
         self.fired.len()
     }
 
+    /// A reset needs a later window (beyond the tolerance, which
+    /// [`canonical_reset`] already applied) whose predecessor's reset time has
+    /// actually arrived, after that predecessor reached 90% or more.
     fn detect_reset(
         &mut self,
         key: WindowKey,
         previous: PreviousWindow,
         current: PreviousWindow,
+        now: UnixSeconds,
         alerts: &mut Vec<Alert>,
     ) {
-        let reset_increased = matches!(
+        let rolled_over = matches!(
             (previous.resets_at, current.resets_at),
-            (Some(before), Some(after)) if after > before
+            (Some(before), Some(after))
+                if after > before
+                    && now.0 >= before.0.saturating_sub(SAME_RESET_TOLERANCE_SECONDS)
         );
-        if !reset_increased || previous.used.get() < 90.0 {
+        if !rolled_over || previous.used.get() < 90.0 {
             return;
         }
 
@@ -117,7 +142,11 @@ impl AlertTracker {
                     provider_label(key.0),
                     window_label(key.1)
                 ),
-                body: "A new usage window has started".to_owned(),
+                body: format!(
+                    "Usage is back to {:.0}% · {}",
+                    current.used.get(),
+                    reset_body(current.resets_at)
+                ),
             });
         }
     }
@@ -168,6 +197,27 @@ impl AlertTracker {
     }
 }
 
+fn is_fresh(observed_at: UnixSeconds, now: UnixSeconds) -> bool {
+    now.0.saturating_sub(observed_at.0) < FRESH_SECONDS
+}
+
+/// Keeps the window's established reset time while a new reading reports one
+/// within [`SAME_RESET_TOLERANCE_SECONDS`], so source jitter neither looks like a
+/// reset nor creates a new deduplication key.
+fn canonical_reset(
+    previous: Option<PreviousWindow>,
+    reported: Option<UnixSeconds>,
+) -> Option<UnixSeconds> {
+    match (previous.and_then(|window| window.resets_at), reported) {
+        (Some(established), Some(reported))
+            if (reported.0 - established.0).abs() <= SAME_RESET_TOLERANCE_SECONDS =>
+        {
+            Some(established)
+        }
+        _ => reported,
+    }
+}
+
 fn provider_label(provider: Provider) -> &'static str {
     match provider {
         Provider::Claude => "Claude",
@@ -177,15 +227,17 @@ fn provider_label(provider: Provider) -> &'static str {
 
 fn window_label(kind: WindowKind) -> String {
     match kind {
-        WindowKind::Session => "session".to_owned(),
+        WindowKind::Session => "5-hour".to_owned(),
         WindowKind::Weekly => "weekly".to_owned(),
         WindowKind::Other { minutes } => format!("{minutes}-minute"),
     }
 }
 
+/// Formats the reset rounded to the nearest minute: the usage API reports
+/// resets such as 13:59:59.6, which would otherwise read as "1:59 PM".
 fn reset_body(resets_at: Option<UnixSeconds>) -> String {
     resets_at
-        .and_then(|at| DateTime::from_timestamp(at.0, 0))
+        .and_then(|at| DateTime::from_timestamp(at.0.saturating_add(30), 0))
         .map_or_else(
             || "Reset time unavailable".to_owned(),
             |utc| {

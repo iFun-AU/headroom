@@ -668,8 +668,10 @@ pub struct SourceState {
 - Only for `Weekly`. Return `None` if the window has been open for less than 6 h (too noisy).
 
 ### 7.7 Alerts (`alerts.rs`)
-- Thresholds come from settings (default `[75, 90, 100]`). Fire when `used` crosses a threshold **upward** since the previous snapshot. Deduplicate by `(provider, kind, threshold, resets_at)`.
-- "Reset" alert: when the window's `resets_at` increases and the previous `used >= 90`. The message is "Claude session limit reset".
+- Thresholds come from settings (default `[75, 90, 100]`). Fire when `used` crosses a threshold **upward** since the previous fresh reading. Deduplicate by `(provider, kind, threshold, resets_at)`.
+- Only fresh windows (observed < 15 min ago, not `reset_pending`) move the baseline; a stale or pending window keeps the previous one, and a window's first fresh reading is a silent baseline (D-028).
+- Reset times within 5 min of a window's established `resets_at` are the same window and keep that value as the dedupe key, because Claude's sources report the same reset up to a second apart (D-028).
+- "Reset" alert: when `resets_at` moves later by more than 5 min, the previous reset time has arrived (within 5 min), and the previous `used >= 90`. Title "Claude 5-hour limit reset", body "Usage is back to 2% · Resets Thu 7:00 PM". Reset times in bodies round to the nearest minute.
 - Output: `Vec<Alert { title, body }>`. The Tauri layer sends notifications, so core does no I/O.
 
 ---
