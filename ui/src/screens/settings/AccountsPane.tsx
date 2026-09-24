@@ -8,6 +8,7 @@ import { SettingsGroup, SettingsRow } from "../../components/SettingsGroup";
 import { StatusChip } from "../../components/StatusBadge";
 import { useBridgeStatus } from "../../hooks/useBridgeStatus";
 import { detectCodex, isTauriRuntime, pickPath } from "../../ipc";
+import { ClaudeUsageApiGroup } from "./ClaudeUsageApiGroup";
 
 function effectiveness(status: BridgeStatus | null): { readonly tone: "ok" | "warning" | "neutral"; readonly text: string } {
   if (status === null || !status.installed) return { tone: "neutral", text: "Disabled" };
@@ -17,7 +18,7 @@ function effectiveness(status: BridgeStatus | null): { readonly tone: "ok" | "wa
   return { tone: "neutral", text: "Unverified" };
 }
 
-export function AccountsPane({ settings, disabled, save, fixtureBridge, fixtureDetection }: { readonly settings: Settings; readonly disabled: boolean; readonly save: (settings: Settings) => void; readonly fixtureBridge?: BridgeStatus | undefined; readonly fixtureDetection?: CodexDetection | undefined }) {
+export function AccountsPane({ settings, oauthAvailable, disabled, save, fixtureBridge, fixtureDetection }: { readonly settings: Settings; readonly oauthAvailable: boolean; readonly disabled: boolean; readonly save: (settings: Settings) => void; readonly fixtureBridge?: BridgeStatus | undefined; readonly fixtureDetection?: CodexDetection | undefined }) {
   const bridge = useBridgeStatus(fixtureBridge);
   const [detection, setDetection] = useState<CodexDetection | null>(fixtureDetection ?? null);
   const [detecting, setDetecting] = useState(false);
@@ -46,6 +47,7 @@ export function AccountsPane({ settings, disabled, save, fixtureBridge, fixtureD
         {bridge.status?.effective === "headlessOnly" ? <div className="settings-warning"><Icon name="warning" size={15} /><span><strong>Limits update only from Claude Code in a terminal.</strong> The Claude desktop app, IDE extensions, and SDK don’t run status lines. Use <span className="mono">claude</span> in a terminal to refresh limits.</span></div> : null}
         {bridge.error === null ? null : <div className="settings-error" role="status">{bridge.error}</div>}
       </SettingsGroup>
+      {oauthAvailable ? <ClaudeUsageApiGroup settings={settings} disabled={disabled} save={save} /> : null}
     </>
   );
 }

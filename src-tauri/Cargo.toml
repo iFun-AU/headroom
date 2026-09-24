@@ -34,6 +34,11 @@ ts-rs = { version = "12.0.1", features = ["no-serde-warnings", "serde-compat"] }
 usage-core = { version = "1.0.0", path = "../crates/usage-core" }
 usage-sources = { version = "1.0.0", path = "../crates/usage-sources" }
 
+[features]
+default = []
+# Opt-in Claude OAuth usage source (DEVELOPMENT.md M9, decision D-023).
+claude-oauth = ["usage-sources/claude-oauth"]
+
 [lints]
 workspace = true
 

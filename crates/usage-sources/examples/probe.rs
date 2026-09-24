@@ -28,6 +28,8 @@ use usage_sources::{
     store::{StoreHandle, UsageStore},
 };
 
+#[path = "probe/claude_oauth.rs"]
+mod claude_oauth;
 #[path = "probe/fixture.rs"]
 mod fixture;
 
@@ -53,6 +55,9 @@ enum Stop {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let arguments = Arguments::parse(std::env::args().skip(1))?;
+    if arguments.claude_oauth_dump_keys {
+        return claude_oauth::dump_keys().await;
+    }
     let config = if arguments.fixture {
         let fixture = fixture::fixture()?;
         ProbeConfig {
@@ -255,16 +260,19 @@ async fn read_installed_at(path: &Path) -> Result<Option<UnixSeconds>, Box<dyn E
 struct Arguments {
     fixture: bool,
     seconds: u64,
+    claude_oauth_dump_keys: bool,
 }
 
 impl Arguments {
     fn parse(arguments: impl Iterator<Item = String>) -> Result<Self, io::Error> {
         let mut fixture = false;
+        let mut claude_oauth_dump_keys = false;
         let mut seconds = DEFAULT_LIVE_SECONDS;
         let mut arguments = arguments.peekable();
         while let Some(argument) = arguments.next() {
             match argument.as_str() {
                 "--fixture" => fixture = true,
+                "--claude-oauth-dump-keys" => claude_oauth_dump_keys = true,
                 "--seconds" => {
                     let value = arguments
                         .next()
@@ -276,9 +284,17 @@ impl Arguments {
                         return Err(io::Error::other("--seconds must be positive"));
                     }
                 }
-                _ => return Err(io::Error::other("usage: probe [--fixture] [--seconds N]")),
+                _ => {
+                    return Err(io::Error::other(
+                        "usage: probe [--fixture] [--seconds N] | --claude-oauth-dump-keys",
+                    ));
+                }
             }
         }
-        Ok(Self { fixture, seconds })
+        Ok(Self {
+            fixture,
+            seconds,
+            claude_oauth_dump_keys,
+        })
     }
 }

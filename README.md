@@ -8,7 +8,7 @@ How Is It is a macOS menu-bar app that shows Claude and Codex session limits, we
 
 - **Codex:** starts one owned `codex app-server` process for account limits and completed daily totals, and reads rollout JSONL files for near-real-time local activity and fallback limits. It never reads `.codex/auth.json`.
 - **Claude:** reads local Claude Code conversation logs for token activity. Plan-limit updates are available only when you explicitly enable the status-line bridge described below.
-- **Claude OAuth:** not included in v1. The app does not read Claude Code's Keychain credentials or call Anthropic's undocumented usage endpoint.
+- **Claude usage API (optional, unofficial):** only in builds with the `claude-oauth` feature, and only after you turn on **Settings → Accounts → Claude usage API**. It then reads Claude Code's sign-in from the Keychain (read-only) and polls Anthropic's undocumented usage endpoint every few minutes. Default builds never read the credential or call the endpoint.
 
 Provider data, settings, and logs stay on the Mac. Codex authentication remains owned by Codex.
 
@@ -29,7 +29,7 @@ From the repository root:
 ```bash
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
 scripts/build-sidecar.sh universal-apple-darwin
-cargo tauri build --target universal-apple-darwin
+cargo tauri build --target universal-apple-darwin --features claude-oauth
 codesign --force --deep -s - \
   "target/universal-apple-darwin/release/bundle/macos/How Is It.app"
 codesign --verify --deep --strict --verbose=2 \
@@ -79,6 +79,15 @@ Claude Code runs status-line commands only in its interactive terminal UI (`clau
 To uninstall the bridge, choose **Disable** in the same Accounts pane before removing the app. How Is It re-reads the current settings, restores the exact prior `statusLine` value, and retains unrelated edits made after installation. If another tool or person has replaced the command, How Is It leaves the file untouched instead of overwriting that newer choice.
 
 Project-local, organization, managed, or server settings can take precedence over the user-level `~/.claude/settings.json`. In that case the bridge can be installed but not invoked; after continued Claude activity without bridge writes, the app reports **Likely Overridden** and shows a hint. Resolve the higher-precedence setting rather than repeatedly reinstalling the bridge.
+
+## Claude usage API
+
+Use this when you run Claude Code in the Claude desktop app or an IDE, where the status-line bridge never runs. It works only in builds made with `--features claude-oauth` (the build command above includes it); omit the flag to build without any Keychain or network access for Claude.
+
+- The endpoint is unofficial and may change or disappear without notice; the app then shows **Unsupported** for Claude and stops polling until you toggle the setting or restart.
+- The first poll shows a macOS prompt to allow access to `Claude Code-credentials`. Choose **Always Allow**. If you deny it, polling stops until you turn the setting off and on.
+- The token is only read, never refreshed, stored, or logged. If it has expired, the app shows **Sign-in expired**; open Claude Code to refresh it.
+- Polls skip while the status-line bridge delivered data in the last three minutes, and back off on errors and rate limits. Opening the popover never forces an extra poll.
 
 ## Everyday use
 

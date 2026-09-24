@@ -1,11 +1,11 @@
 //! Restartable concrete-source generation owned by the application runtime.
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use tokio::{sync::watch, task::JoinSet, time::timeout};
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
-use usage_core::log_trunc;
+use usage_core::{UsageSnapshot, log_trunc};
 use usage_sources::{
     SourceEvent,
     claude::{
@@ -34,6 +34,11 @@ pub(super) struct SourceSupervisor {
     events: tokio::sync::mpsc::Sender<SourceEvent>,
     scheduler: Scheduler,
     app_server: watch::Sender<Option<AppServerControl>>,
+    #[cfg_attr(
+        not(feature = "claude-oauth"),
+        allow(dead_code, reason = "read only by the optional OAuth source")
+    )]
+    usage: watch::Receiver<Arc<UsageSnapshot>>,
 }
 
 impl SourceSupervisor {
@@ -44,6 +49,7 @@ impl SourceSupervisor {
         events: tokio::sync::mpsc::Sender<SourceEvent>,
         scheduler: Scheduler,
         app_server: watch::Sender<Option<AppServerControl>>,
+        usage: watch::Receiver<Arc<UsageSnapshot>>,
     ) -> Self {
         Self {
             roots,
@@ -52,6 +58,7 @@ impl SourceSupervisor {
             events,
             scheduler,
             app_server,
+            usage,
         }
     }
 
@@ -102,6 +109,16 @@ impl SourceSupervisor {
                 self.events.clone(),
                 generation_cancel.child_token(),
             );
+            #[cfg(feature = "claude-oauth")]
+            if settings.claude_oauth_enabled {
+                spawn_oauth(
+                    &mut tasks,
+                    &self.scheduler,
+                    &self.usage,
+                    self.events.clone(),
+                    generation_cancel.child_token(),
+                );
+            }
 
             let restart = wait_for_restart(
                 &mut self.settings,
@@ -177,6 +194,39 @@ async fn drain(tasks: &mut JoinSet<()>) {
             warn!(error = %log_trunc(&error.to_string()), "source task join failed");
         }
     }
+}
+
+#[cfg(feature = "claude-oauth")]
+fn spawn_oauth(
+    tasks: &mut JoinSet<()>,
+    scheduler: &Scheduler,
+    usage: &watch::Receiver<Arc<UsageSnapshot>>,
+    events: tokio::sync::mpsc::Sender<SourceEvent>,
+    cancel: CancellationToken,
+) {
+    use usage_sources::claude::{
+        keychain::KeychainCredentials,
+        oauth::{OAuthSource, ReqwestUsageHttp},
+    };
+
+    let http = match ReqwestUsageHttp::new(env!("CARGO_PKG_VERSION")) {
+        Ok(http) => http,
+        Err(error) => {
+            warn!(error = %log_trunc(&error.to_string()), "Claude OAuth source could not start");
+            return;
+        }
+    };
+    let source = OAuthSource::new(
+        http,
+        KeychainCredentials::new(),
+        scheduler.clone(),
+        usage.clone(),
+    );
+    tasks.spawn(async move {
+        if let Err(error) = source.run(events, cancel).await {
+            warn!(error = %log_trunc(&error.to_string()), "Claude OAuth source stopped");
+        }
+    });
 }
 
 fn spawn_app_server(

@@ -1,6 +1,7 @@
 //! Lenient provider DTO parsing.
 
 mod claude_log;
+mod claude_oauth;
 mod claude_statusline;
 mod codex_app_server;
 mod codex_rollout;
@@ -11,6 +12,7 @@ use thiserror::Error;
 pub use claude_log::{
     ClaudeLogRecord, ClaudeSession, parse_claude_log_line, parse_claude_log_record,
 };
+pub use claude_oauth::parse_claude_oauth_usage;
 pub use claude_statusline::parse_claude_statusline;
 pub use codex_app_server::{
     parse_codex_rate_limits_notification, parse_codex_rate_limits_response,
@@ -64,6 +66,7 @@ fn display_plan(value: &str) -> Option<String> {
         "free" => "Free",
         "plus" => "Plus",
         "pro" => "Pro",
+        "max" => "Max",
         "team" => "Team",
         "business" => "Business",
         "enterprise" => "Enterprise",

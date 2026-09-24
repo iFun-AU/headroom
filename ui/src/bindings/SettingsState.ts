@@ -16,4 +16,8 @@ readOnly: boolean,
 /**
  * Human-readable downgrade or recovery notice.
  */
-notice: string | null, };
+notice: string | null,
+/**
+ * Whether this build includes the Claude OAuth usage source.
+ */
+claudeOauthAvailable: boolean, };

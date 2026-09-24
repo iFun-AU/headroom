@@ -156,7 +156,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
   Expected: no output and exit status 1. Inspect any match as sensitive; do not paste it into an issue or commit.
 
-- [ ] **Claude OAuth post-v1 gate:** v1 must continue to show no OAuth toggle, Keychain prompt, `reqwest`, or `security-framework` path. Before any M9 work, the owner must explicitly accept the unofficial endpoint's policy risk, verify only JSON key paths/types with the gated probe described in T9.1, and record that decision. Expected for this v1 handover: M9 remains unbuilt.
+- [ ] **Claude usage API (M9, D-023/D-024):** a default build shows no usage-API group, Keychain prompt, `reqwest`, or `security-framework` path. In a `--features claude-oauth` build, enable **Settings → Accounts → Claude usage API**, choose **Always Allow** at the Keychain prompt, and compare the Claude Session and Weekly percentages with Claude Code's `/usage`. Expected: they match within a point (this confirms the unverified 0–100 `utilization` scale), plan shows the subscription name, and the Claude card works with only desktop-app sessions active.
 
 ## 4. Native look and macOS behavior
 

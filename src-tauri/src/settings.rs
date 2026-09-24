@@ -146,6 +146,8 @@ pub struct SettingsState {
     pub read_only: bool,
     /// Human-readable downgrade or recovery notice.
     pub notice: Option<String>,
+    /// Whether this build includes the Claude OAuth usage source.
+    pub claude_oauth_available: bool,
 }
 
 impl SettingsState {
@@ -154,6 +156,7 @@ impl SettingsState {
             settings,
             read_only: false,
             notice: None,
+            claude_oauth_available: cfg!(feature = "claude-oauth"),
         }
     }
 
@@ -162,6 +165,7 @@ impl SettingsState {
             settings: Settings::default(),
             read_only: true,
             notice: Some(NEWER_SETTINGS_NOTICE.to_owned()),
+            claude_oauth_available: cfg!(feature = "claude-oauth"),
         }
     }
 }

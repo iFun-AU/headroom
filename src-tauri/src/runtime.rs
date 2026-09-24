@@ -174,6 +174,7 @@ impl RuntimeState {
             events,
             scheduler.clone(),
             app_server_tx,
+            store.snapshot.clone(),
         );
 
         let cancel = CancellationToken::new();

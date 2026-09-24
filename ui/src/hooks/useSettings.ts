@@ -55,7 +55,7 @@ export function useSettings(fixture?: SettingsState): SettingsHookState {
     setSaving(true);
     setError(null);
     try {
-      const next = native ? await setSettings(settings) : { settings, readOnly: false, notice: null };
+      const next = native ? await setSettings(settings) : { settings, readOnly: false, notice: null, claudeOauthAvailable: fixture?.claudeOauthAvailable ?? false };
       setState(next);
       return next;
     } catch (cause) {
@@ -64,7 +64,7 @@ export function useSettings(fixture?: SettingsState): SettingsHookState {
     } finally {
       setSaving(false);
     }
-  }, [native]);
+  }, [native, fixture?.claudeOauthAvailable]);
 
   const reset = useCallback(async () => {
     setSaving(true);

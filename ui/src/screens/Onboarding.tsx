@@ -14,6 +14,7 @@ import { StatusChip } from "../components/StatusBadge";
 import { useBridgeStatus } from "../hooks/useBridgeStatus";
 import { useSettings } from "../hooks/useSettings";
 import { completeOnboarding, detectCodex, isTauriRuntime, pickPath, requestNotificationAccess } from "../ipc";
+import { ClaudeUsageApiGroup } from "./settings/ClaudeUsageApiGroup";
 
 interface OnboardingProps {
   readonly navigate: (route: Route) => void;
@@ -87,6 +88,7 @@ export function Onboarding({ navigate, fixtureState, fixtureDetection, fixtureBr
         <StepHeader step={step} />
         {step === 1 ? <SettingsGroup><SettingsRow label="Codex CLI" description={detection?.path ?? settings?.codexPath ?? "Automatic discovery"} leading={<ServiceBadge provider="codex" size="regular" />}><StatusChip tone={detection === null || detection.path === null ? "neutral" : "ok"}>{detection?.path === null ? "Not found" : detection === null ? "Detecting…" : `Found${detection.version === null ? "" : ` · ${detection.version}`}`}</StatusChip></SettingsRow><SettingsRow label="Not the right one?"><button className="capsule-button ctl" onClick={runDetection}>Detect Again</button><button className="capsule-button ctl" onClick={browse}>Browse…</button></SettingsRow><footer>Limits are read through <span className="mono">codex app-server</span>. Your Codex sign-in stays with Codex.</footer></SettingsGroup> : null}
         {step === 2 ? <ClaudeExplanation /> : null}
+        {step === 2 && settings !== undefined && settingsState.state?.claudeOauthAvailable === true ? <ClaudeUsageApiGroup settings={settings} disabled={settingsState.state.readOnly || settingsState.saving} save={(next) => { void settingsState.save(next); }} /> : null}
         {step === 3 ? <SettingsGroup foot="You can change these in Settings → Alerts."><SettingsRow label="75% and 90% used" description="One alert per threshold per window" leading={<span className="settings-icon--warn"><Icon name="warning" size={18} /></span>} /><SettingsRow label="Limit reached and reset" description="So you know when capacity is back" leading={<span className="settings-icon--crit"><Icon name="hourglass" size={18} /></span>} /></SettingsGroup> : null}
         {error === null && bridge.error === null && settingsState.error === null ? null : <div className="settings-error" role="status">{error ?? bridge.error ?? settingsState.error}</div>}
         <footer className="onboarding-actions">

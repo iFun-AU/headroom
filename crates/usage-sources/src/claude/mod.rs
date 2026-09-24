@@ -8,3 +8,9 @@ pub mod bridge_source;
 pub mod effectiveness;
 /// Recursive Claude Code local-history source.
 pub mod history;
+/// Read-only Claude Code OAuth credential access.
+#[cfg(feature = "claude-oauth")]
+pub mod keychain;
+/// Opt-in poller for Claude's unofficial OAuth usage endpoint.
+#[cfg(feature = "claude-oauth")]
+pub mod oauth;

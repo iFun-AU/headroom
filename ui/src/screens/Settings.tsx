@@ -45,7 +45,7 @@ export function Settings({ snapshot, navigateOverview, fixtureState, fixtureBrid
   let pane = null;
   if (current !== null) {
     switch (section) {
-      case "Accounts": pane = <AccountsPane settings={current.settings} disabled={current.readOnly || settingsState.saving} save={save} fixtureBridge={fixtureBridge} fixtureDetection={fixtureDetection} />; break;
+      case "Accounts": pane = <AccountsPane settings={current.settings} oauthAvailable={current.claudeOauthAvailable} disabled={current.readOnly || settingsState.saving} save={save} fixtureBridge={fixtureBridge} fixtureDetection={fixtureDetection} />; break;
       case "Display": pane = <DisplayPane settings={current.settings} disabled={current.readOnly || settingsState.saving} save={save} />; break;
       case "Alerts": pane = <AlertsPane settings={current.settings} disabled={current.readOnly || settingsState.saving} save={save} />; break;
       case "Refresh": pane = <RefreshPane settings={current.settings} disabled={current.readOnly || settingsState.saving} save={save} />; break;

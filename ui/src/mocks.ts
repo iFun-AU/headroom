@@ -123,6 +123,7 @@ export const MOCK_SETTINGS_STATE: SettingsState = {
   },
   readOnly: false,
   notice: null,
+  claudeOauthAvailable: true,
 };
 
 export const MOCK_READ_ONLY_SETTINGS: SettingsState = {
