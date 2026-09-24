@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- How Is It app icon source; scripts/build-app.sh regenerates the bundle icons from it. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#232838"/>
+      <stop offset="1" stop-color="#07080d"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="claude" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff8a5b" stop-opacity="0.55"/>
+      <stop offset="0.65" stop-color="#ff8a5b"/>
+      <stop offset="1" stop-color="#ffd2bf"/>
+    </linearGradient>
+    <linearGradient id="codex" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3cf2ff" stop-opacity="0.55"/>
+      <stop offset="0.65" stop-color="#3cf2ff"/>
+      <stop offset="1" stop-color="#c9fbff"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-150%" width="160%" height="400%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="186"/>
+    </clipPath>
+  </defs>
+
+  <rect x="100" y="114" width="824" height="824" rx="186" fill="#000" fill-opacity="0.45" filter="url(#shadow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+
+    <!-- Tracks -->
+    <rect x="232" y="352" width="560" height="104" rx="52" fill="#ffffff" fill-opacity="0.08"/>
+    <rect x="232" y="568" width="560" height="104" rx="52" fill="#ffffff" fill-opacity="0.08"/>
+
+    <!-- Bloom -->
+    <rect x="232" y="352" width="356" height="104" rx="52" fill="#ff8a5b" opacity="0.75" filter="url(#glow)"/>
+    <rect x="232" y="568" width="468" height="104" rx="52" fill="#3cf2ff" opacity="0.7" filter="url(#glow)"/>
+
+    <!-- Fills -->
+    <rect x="232" y="352" width="356" height="104" rx="52" fill="url(#claude)"/>
+    <rect x="232" y="568" width="468" height="104" rx="52" fill="url(#codex)"/>
+
+    <!-- Bright heads -->
+    <circle cx="536" cy="404" r="26" fill="#fff4ee"/>
+    <circle cx="648" cy="620" r="26" fill="#effeff"/>
+  </g>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="185" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3"/>
+</svg>

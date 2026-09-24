@@ -24,7 +24,15 @@ The verified development baseline is macOS 27.0, Codex CLI 0.154.0, and Claude C
 
 ## Build the universal app
 
-From the repository root:
+From the repository root, one command builds, ad-hoc signs and verifies the app (add `--install` to replace `/Applications/How Is It.app` and launch it):
+
+```bash
+scripts/build-app.sh
+```
+
+Options: `--no-oauth` builds without the Claude usage API, `--icons` regenerates the bundle icons from `src-tauri/icons/app-icon.svg` (needs `brew install librsvg`), and `--clean` removes build caches and temp files for a full rebuild. The script checks prerequisites and fails with the fix if one is missing.
+
+The equivalent manual steps:
 
 ```bash
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
