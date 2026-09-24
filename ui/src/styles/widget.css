@@ -7,6 +7,16 @@
   width: 100%;
 }
 
+/* The transparent widget window is exactly the widget's size, so the outer
+   glass shadow can only paint into the rounded corners and is clipped into a
+   hard rectangle. Keep just the inset edge highlights. */
+.widget-root.glass {
+  box-shadow:
+    inset 0 1px 0 var(--spec),
+    inset 0 -1px 0 var(--spec-low),
+    inset 0 0 20px var(--glass-inner);
+}
+
 .widget-root[data-variant="Pill"] {
   border-radius: 36px;
   height: 72px;

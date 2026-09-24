@@ -5,67 +5,67 @@ import type { WidgetSettings } from "./WidgetSettings";
 /**
  * Versioned application settings shared with the UI.
  */
-export type Settings = {
+export type Settings = { 
 /**
  * On-disk schema version.
  */
-schemaVersion: number,
+schemaVersion: number, 
 /**
  * Whether the three-step first-run flow has completed.
  */
-onboardingCompleted: boolean,
+onboardingCompleted: boolean, 
 /**
  * Optional Codex executable override.
  */
-codexPath: string | null,
+codexPath: string | null, 
 /**
  * Optional Codex data-directory override.
  */
-codexHome: string | null,
+codexHome: string | null, 
 /**
  * Optional Claude configuration-directory override.
  */
-claudeDir: string | null,
+claudeDir: string | null, 
 /**
  * Whether the consent-based Claude status-line bridge is enabled.
  */
-claudeBridgeEnabled: boolean,
+claudeBridgeEnabled: boolean, 
 /**
  * Reserved post-v1 OAuth toggle; ignored without the feature.
  */
-claudeOauthEnabled: boolean,
+claudeOauthEnabled: boolean, 
 /**
  * Sorted, unique notification thresholds in 1 through 100.
  */
-thresholds: Array<number>,
+thresholds: Array<number>, 
 /**
  * Whether a provider reset should produce a notification.
  */
-notifyOnReset: boolean,
+notifyOnReset: boolean, 
 /**
  * Whether the app starts at login.
  */
-launchAtLogin: boolean,
+launchAtLogin: boolean, 
 /**
  * Whether the app appears in the Dock.
  */
-showDockIcon: boolean,
+showDockIcon: boolean, 
 /**
  * Whether the dashboard window floats above other windows.
  */
-mainAlwaysOnTop: boolean,
+mainAlwaysOnTop: boolean, 
 /**
  * Menu-bar presentation style.
  */
-trayStyle: TrayStyle,
+trayStyle: TrayStyle, 
 /**
  * Floating-widget settings.
  */
-widget: WidgetSettings,
+widget: WidgetSettings, 
 /**
  * Active polling interval, with a minimum of 60 seconds.
  */
-pollActiveSecs: number,
+pollActiveSecs: number, 
 /**
  * Idle polling interval, with a minimum of 120 seconds.
  */

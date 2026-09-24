@@ -2,16 +2,18 @@
 
 mod bars;
 
+use bars::MenuBar;
+
 use std::sync::Mutex;
 
 use tauri::{
-    AppHandle, Manager,
+    AppHandle, Manager, Theme,
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 use tauri_plugin_positioner::{Position, WindowExt};
-use tracing::warn;
+use tracing::{info, warn};
 use usage_core::{ProviderUsage, UsageSnapshot, WindowKind, log_trunc};
 
 use crate::{
@@ -43,10 +45,12 @@ enum TrayIconState {
 enum TrayImage {
     /// Bundled monochrome template icon with a threshold badge.
     Template(TrayIconState),
-    /// Rendered stacked bars of rounded weekly percentages.
+    /// Rendered stacked bars of rounded weekly percentages, labeled for the
+    /// current menu-bar appearance.
     Bars {
         claude: Option<u8>,
         codex: Option<u8>,
+        menu_bar: MenuBar,
     },
 }
 
@@ -139,7 +143,8 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Re-renders the tray from the latest snapshot, e.g. after a style change.
+/// Re-renders the tray from the latest snapshot, e.g. after a style or
+/// system appearance change.
 pub fn refresh(app: &AppHandle) {
     if let Some(runtime) = app.try_state::<RuntimeState>() {
         let snapshot = std::sync::Arc::clone(&runtime.store.snapshot.borrow());
@@ -153,7 +158,7 @@ pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
         .try_state::<RuntimeState>()
         .map(|runtime| runtime.settings.snapshot().settings.tray_style)
         .unwrap_or_default();
-    let next = presentation(snapshot, style);
+    let next = presentation(snapshot, style, menu_bar(app));
     let Some(state) = app.try_state::<TrayState>() else {
         return;
     };
@@ -182,26 +187,47 @@ pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
     if current.image != next.image {
         let (image, template) = match next.image {
             TrayImage::Template(icon) => (state.icon(icon), true),
-            TrayImage::Bars { claude, codex } => (
-                Image::new_owned(bars::render(claude, codex), bars::WIDTH, bars::HEIGHT),
+            TrayImage::Bars {
+                claude,
+                codex,
+                menu_bar,
+            } => (
+                Image::new_owned(
+                    bars::render(claude, codex, menu_bar),
+                    bars::WIDTH,
+                    bars::HEIGHT,
+                ),
                 false,
             ),
         };
-        if let Err(error) = tray
-            .set_icon_as_template(template)
-            .and_then(|()| tray.set_icon(Some(image)))
-        {
+        // Set atomically: tray-icon's plain `set_icon` resets the template flag.
+        if let Err(error) = tray.set_icon_with_as_template(Some(image), template) {
             warn!(error = %log_trunc(&error.to_string()), "could not update tray icon");
         } else {
+            info!(image = ?next.image, "tray image updated");
             current.image = next.image;
         }
+    }
+}
+
+/// The menu bar follows the system appearance, which every window reports
+/// while it has no theme override of its own.
+fn menu_bar(app: &AppHandle) -> MenuBar {
+    let theme = app
+        .webview_windows()
+        .values()
+        .find_map(|window| window.theme().ok());
+    if theme == Some(Theme::Dark) {
+        MenuBar::Dark
+    } else {
+        MenuBar::Light
     }
 }
 
 /// Numbers style titles each provider's weekly limit (decision D-025) and the
 /// template badge reflects the highest window of any kind; Bars style draws
 /// the weekly limits as stacked bars with no title (decision D-026).
-fn presentation(snapshot: &UsageSnapshot, style: TrayStyle) -> TrayPresentation {
+fn presentation(snapshot: &UsageSnapshot, style: TrayStyle, menu_bar: MenuBar) -> TrayPresentation {
     let highest = snapshot
         .claude
         .windows
@@ -223,6 +249,7 @@ fn presentation(snapshot: &UsageSnapshot, style: TrayStyle) -> TrayPresentation 
             image: TrayImage::Bars {
                 claude: claude.map(round_percent),
                 codex: codex.map(round_percent),
+                menu_bar,
             },
         };
     }
@@ -360,7 +387,7 @@ mod tests {
         UsageSnapshot, WindowKind,
     };
 
-    use super::{TrayIconState, TrayImage, presentation};
+    use super::{MenuBar, TrayIconState, TrayImage, presentation};
     use crate::settings::TrayStyle;
     use WindowKind::{Session, Weekly};
 
@@ -405,6 +432,7 @@ mod tests {
         let result = presentation(
             &snapshot(&[(Session, 99.0), (Weekly, 41.4)], &[(Weekly, 77.6)]),
             TrayStyle::Bars,
+            MenuBar::Dark,
         );
         assert_eq!(result.title, "");
         assert_eq!(result.tooltip, "Weekly limits: Claude 41%, Codex 78%");
@@ -412,23 +440,25 @@ mod tests {
             result.image,
             TrayImage::Bars {
                 claude: Some(41),
-                codex: Some(78)
+                codex: Some(78),
+                menu_bar: MenuBar::Dark,
             }
         );
 
-        let empty = presentation(&snapshot(&[], &[]), TrayStyle::Bars);
+        let empty = presentation(&snapshot(&[], &[]), TrayStyle::Bars, MenuBar::Light);
         assert_eq!(
             empty.image,
             TrayImage::Bars {
                 claude: None,
-                codex: None
+                codex: None,
+                menu_bar: MenuBar::Light,
             }
         );
         assert_eq!(empty.tooltip, "How Is It");
     }
 
     fn numbers(snapshot: &UsageSnapshot) -> super::TrayPresentation {
-        presentation(snapshot, TrayStyle::Numbers)
+        presentation(snapshot, TrayStyle::Numbers, MenuBar::Dark)
     }
 
     fn snapshot(claude: &[(WindowKind, f64)], codex: &[(WindowKind, f64)]) -> UsageSnapshot {

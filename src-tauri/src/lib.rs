@@ -110,6 +110,12 @@ pub fn run() -> tauri::Result<()> {
                 api.prevent_exit();
             }
         }
+        // Bars labels follow the menu-bar appearance; the rendered image is
+        // only replaced when it actually changes.
+        tauri::RunEvent::WindowEvent {
+            event: tauri::WindowEvent::ThemeChanged(_),
+            ..
+        } => tray::refresh(app),
         tauri::RunEvent::Exit => {
             if let Some(runtime) = app.try_state::<runtime::RuntimeState>() {
                 runtime.cancel();

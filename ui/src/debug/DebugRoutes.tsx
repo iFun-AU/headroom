@@ -150,6 +150,11 @@ function StatesScreen() {
   );
 }
 
+const WEEKLY_ONLY_CODEX_SNAPSHOT = {
+  ...MOCK_SNAPSHOT,
+  codex: { ...MOCK_SNAPSHOT.codex, windows: MOCK_SNAPSHOT.codex.windows.filter((window) => window.kind.kind === "weekly") },
+};
+
 function WidgetGallery() {
   return (
     <main className="widget-gallery">
@@ -159,6 +164,8 @@ function WidgetGallery() {
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" forceHover />
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" />
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" forceHover />
+      <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" />
+      <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" />
     </main>
   );
 }

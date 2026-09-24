@@ -3,11 +3,11 @@
 /**
  * Result of bounded Codex executable detection.
  */
-export type CodexDetection = {
+export type CodexDetection = { 
 /**
  * Resolved executable path, if found.
  */
-path: string | null,
+path: string | null, 
 /**
  * Bounded `codex --version` output, if executable probing succeeded.
  */

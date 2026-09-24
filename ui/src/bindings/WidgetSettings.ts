@@ -4,23 +4,23 @@ import type { WidgetVariant } from "./WidgetVariant";
 /**
  * Persisted floating-widget presentation and position.
  */
-export type WidgetSettings = {
+export type WidgetSettings = { 
 /**
  * Whether the widget should be restored on startup.
  */
-visible: boolean,
+visible: boolean, 
 /**
  * Saved physical x coordinate, if the user has positioned the widget.
  */
-x: number | null,
+x: number | null, 
 /**
  * Saved physical y coordinate, if the user has positioned the widget.
  */
-y: number | null,
+y: number | null, 
 /**
  * Active widget layout.
  */
-variant: WidgetVariant,
+variant: WidgetVariant, 
 /**
  * Window opacity in the inclusive range 0.4 through 1.0.
  */

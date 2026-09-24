@@ -4,19 +4,19 @@ import type { Settings } from "./Settings";
 /**
  * Settings plus downgrade-safety metadata exposed to the UI.
  */
-export type SettingsState = {
+export type SettingsState = { 
 /**
  * Effective in-memory settings.
  */
-settings: Settings,
+settings: Settings, 
 /**
  * Whether saves are disabled because the disk schema is newer.
  */
-readOnly: boolean,
+readOnly: boolean, 
 /**
  * Human-readable downgrade or recovery notice.
  */
-notice: string | null,
+notice: string | null, 
 /**
  * Whether this build includes the Claude OAuth usage source.
  */

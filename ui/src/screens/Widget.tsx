@@ -2,7 +2,7 @@
  * @file Widget.tsx
  * @description The three exact-size floating widget variants and in-bounds hover controls.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PointerEvent } from "react";
 import type { LimitWindow } from "../bindings/LimitWindow";
 import type { Provider } from "../bindings/Provider";
 import type { ProviderUsage } from "../bindings/ProviderUsage";
@@ -24,6 +24,11 @@ function ThinBar({ provider, window, height }: { readonly provider: Provider; re
   return <NeonBar percent={window.used} accent={provider} label={window.kind.kind === "session" ? "5-hour limit" : "weekly limit"} resetsAt={window.resetsAt} resetPending={window.resetPending} height={height} showValue={false} reflect={false} />;
 }
 
+/** Some plans (e.g. Codex) have no 5-hour limit; drop that row rather than show an empty bar. */
+function showsSession(session: LimitWindow | undefined, weekly: LimitWindow | undefined): boolean {
+  return session !== undefined || weekly === undefined;
+}
+
 function WidgetLetter({ provider }: { readonly provider: Provider }) {
   return <span className="widget-letter" data-provider={provider}>{provider === "claude" ? "C" : "X"}</span>;
 }
@@ -31,12 +36,13 @@ function WidgetLetter({ provider }: { readonly provider: Provider }) {
 function PillProvider({ usage }: { readonly usage: ProviderUsage }) {
   const session = usageWindow(usage, "session");
   const weekly = usageWindow(usage, "weekly");
+  const withSession = showsSession(session, weekly);
   return (
     <div className="widget-pill__provider" data-provider={usage.provider}>
       <WidgetLetter provider={usage.provider} />
-      <span className="widget-pill__bars"><ThinBar provider={usage.provider} window={session} height={6} /><ThinBar provider={usage.provider} window={weekly} height={4} /></span>
+      <span className="widget-pill__bars">{withSession && <ThinBar provider={usage.provider} window={session} height={6} />}<ThinBar provider={usage.provider} window={weekly} height={4} /></span>
       <span className="widget-pill__values">
-        {session === undefined ? <small>—</small> : <UsageValue percent={session.used} provider={usage.provider} compact />}
+        {!withSession ? null : session === undefined ? <small>—</small> : <UsageValue percent={session.used} provider={usage.provider} compact />}
         <small className="num">{weekly === undefined ? "—" : `${String(weekly.used)}%`}</small>
       </span>
     </div>
@@ -52,7 +58,7 @@ function StackProvider({ usage }: { readonly usage: ProviderUsage }) {
   return (
     <section className="widget-stack__provider" data-provider={usage.provider}>
       <header><WidgetLetter provider={usage.provider} /><strong>{usage.provider === "claude" ? "Claude" : "Codex"}</strong></header>
-      {row("5h", session, 6)}
+      {showsSession(session, weekly) && row("5h", session, 6)}
       {row("wk", weekly, 4)}
     </section>
   );
@@ -101,10 +107,17 @@ export function Widget({
     void settingsState.save({ ...settings, widget: { ...settings.widget, opacity: nextOpacity } });
   };
 
+  // A dragged slider keeps focus, and `:focus-within` would then pin the hover
+  // controls after the pointer leaves. Blurring also commits via `onBlur`.
+  const releaseFocus = (event: PointerEvent<HTMLElement>) => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && event.currentTarget.contains(active)) active.blur();
+  };
+
   if (snapshot === null || settings === undefined) return <section className="widget-root glass" data-variant={variantOverride ?? "Loading"} aria-label="Usage widget loading"><span className="shim" /></section>;
   const variant = variantOverride ?? settings.widget.variant;
   return (
-    <section className="widget-root glass" data-variant={variant} data-force-hover={forceHover} data-tauri-drag-region aria-label={`${variant} usage widget`} style={{ opacity: opacity / 100 }}>
+    <section className="widget-root glass" data-variant={variant} data-force-hover={forceHover} data-tauri-drag-region aria-label={`${variant} usage widget`} style={{ opacity: opacity / 100 }} onPointerLeave={releaseFocus}>
       {variant === "Mini" ? <MiniWidget snapshot={snapshot} /> : (
         <>
           <div className="widget-content">
