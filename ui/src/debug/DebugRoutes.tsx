@@ -155,6 +155,12 @@ const WEEKLY_ONLY_CODEX_SNAPSHOT = {
   codex: { ...MOCK_SNAPSHOT.codex, windows: MOCK_SNAPSHOT.codex.windows.filter((window) => window.kind.kind === "weekly") },
 };
 
+/** Codex without credits keeps its limits even when credits replace them. */
+const NO_CODEX_CREDITS_SNAPSHOT = {
+  ...MOCK_SNAPSHOT,
+  codex: { ...MOCK_SNAPSHOT.codex, credits: MOCK_SNAPSHOT.codex.credits === null ? null : { ...MOCK_SNAPSHOT.codex.credits, enabled: false } },
+};
+
 function WidgetGallery() {
   return (
     <main className="widget-gallery">
@@ -171,6 +177,12 @@ function WidgetGallery() {
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" windowsOverride="Weekly" />
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" windowsOverride="Weekly" />
       <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" windowsOverride="Both" forceHover />
+      <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" creditsOverride="WithLimits" />
+      <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" creditsOverride="WithLimits" />
+      <Widget snapshot={NO_CODEX_CREDITS_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" creditsOverride="Only" />
+      <Widget snapshot={NO_CODEX_CREDITS_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" creditsOverride="Only" />
+      <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" creditsOverride="WithLimits" forceHover />
+      <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" creditsOverride="Only" />
     </main>
   );
 }

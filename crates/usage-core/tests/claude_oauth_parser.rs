@@ -2,7 +2,9 @@
 
 #![allow(clippy::expect_used)]
 
-use usage_core::{Provider, SourceKind, UnixSeconds, WindowKind, parse::parse_claude_oauth_usage};
+use usage_core::{
+    CreditAmount, Provider, SourceKind, UnixSeconds, WindowKind, parse::parse_claude_oauth_usage,
+};
 
 const OBSERVED: UnixSeconds = UnixSeconds(1_790_000_000);
 
@@ -101,4 +103,68 @@ fn invalid_json_and_wrongly_typed_known_fields_are_errors() {
             "input: {input}"
         );
     }
+}
+
+fn usd(minor: i64) -> CreditAmount {
+    CreditAmount {
+        minor,
+        exponent: 2,
+        currency: Some("USD".to_owned()),
+    }
+}
+
+#[test]
+fn spend_maps_to_extra_usage_credits() {
+    let reading = parse_claude_oauth_usage(
+        include_str!("fixtures/claude_oauth_usage.json"),
+        OBSERVED,
+        None,
+    )
+    .expect("fixture should parse")
+    .expect("fixture should contain windows");
+    let credits = reading.credits.expect("spend should map to credits");
+
+    assert!(credits.enabled);
+    assert!(!credits.unlimited);
+    assert_eq!(credits.used, Some(usd(1_240)));
+    assert_eq!(credits.limit, Some(usd(5_000)));
+    assert_eq!(credits.balance, None);
+    assert_eq!(credits.source, SourceKind::ClaudeOAuth);
+    assert_eq!(credits.observed_at, OBSERVED);
+}
+
+#[test]
+fn unexpected_spend_shapes_drop_only_the_credits() {
+    let window = r#""five_hour":{"utilization":10.0,"resets_at":null}"#;
+    for spend in [
+        r#""spend":null"#,
+        r#""spend":"unexpected""#,
+        r#""spend":{"used":{"amount_minor":1}}"#,
+        r#""spend":{"enabled":"yes"}"#,
+    ] {
+        let reading = parse_claude_oauth_usage(&format!("{{{window},{spend}}}"), OBSERVED, None)
+            .expect("an odd spend must not fail the reading")
+            .expect("the window should still parse");
+        assert_eq!(reading.windows.len(), 1, "{spend}");
+        assert_eq!(reading.credits, None, "{spend}");
+    }
+
+    let partial = parse_claude_oauth_usage(
+        &format!(
+            r#"{{{window},"spend":{{"enabled":false,"used":{{"amount_minor":7,"currency":"usd","exponent":99}},"limit":{{"amount_minor":500,"currency":"usd","exponent":2}}}}}}"#
+        ),
+        OBSERVED,
+        None,
+    )
+    .expect("should parse")
+    .expect("should contain a window")
+    .credits
+    .expect("enabled is present");
+    assert!(!partial.enabled);
+    assert_eq!(partial.used, None, "an implausible exponent is dropped");
+    assert_eq!(
+        partial.limit,
+        Some(usd(500)),
+        "currency codes are upper-cased"
+    );
 }

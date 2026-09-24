@@ -7,6 +7,7 @@ import type { BridgeStatus } from "../bindings/BridgeStatus";
 import type { LimitWindow } from "../bindings/LimitWindow";
 import type { Provider } from "../bindings/Provider";
 import type { ProviderUsage } from "../bindings/ProviderUsage";
+import { creditSummary, formatAmount } from "../credits";
 import { Countdown } from "./Countdown";
 import { Icon, ServiceBadge, type IconName } from "./Icon";
 import { NeonBar } from "./NeonBar";
@@ -124,6 +125,24 @@ function UsageBlock({ window, provider, dimmed }: { readonly window: LimitWindow
         dimmed={dimmed}
       />
       <span className="usage-block__reset"><Icon name={window.resetPending ? "refresh" : "clock"} size={13} /><Countdown resetsAt={window.resetsAt} resetPending={window.resetPending} /></span>
+    </div>
+  );
+}
+
+/** Claude extra usage (spent of its limit) or Codex credits (balance); the dashboard always shows them when reported (D-030). */
+function CreditsBlock({ usage, dimmed }: { readonly usage: ProviderUsage; readonly dimmed: boolean }) {
+  const credits = usage.credits;
+  if (credits === null) return null;
+  const extraUsage = credits.source === "claudeOAuth";
+  const summary = creditSummary(providerName(usage.provider), credits);
+  if (summary === null) return <div className="provider-muted"><Icon name="info" size={14} />{extraUsage ? "Extra usage is off" : "No Codex credits"}</div>;
+  return (
+    <div className="usage-block credits-block" title={summary.long}>
+      <div className="usage-block__heading">
+        <span><strong>{extraUsage ? "Extra usage" : "Credits"}</strong><small>{extraUsage ? "Spent beyond plan limits" : credits.unlimited ? "Unlimited" : "Remaining balance"}</small></span>
+        <span className="credits-block__amount num" data-provider={usage.provider} data-dimmed={dimmed}>{summary.amount}{extraUsage && credits.limit !== null ? <small> of {formatAmount(credits.limit)}</small> : null}</span>
+      </div>
+      {summary.percent === null ? null : <NeonBar percent={summary.percent} accent={usage.provider} label={summary.long} resetsAt={null} resetPending={false} showValue={false} dimmed={dimmed} />}
     </div>
   );
 }
@@ -252,11 +271,12 @@ export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAct
       {disconnected ? staticState : null}
       {!disconnected && usage.status.state === "degraded" ? <div className="provider-muted"><Icon name="info" size={14} />{usage.status.reason}</div> : null}
       {!disconnected && session === undefined ? <div className="provider-muted"><Icon name="info" size={14} />No 5-hour limit on this plan</div> : null}
-      {!disconnected && session?.used === 100 ? <LimitReached session={session} weekly={weekly} provider={provider} /> : null}
+      {!disconnected && session?.used === 100 ? <><LimitReached session={session} weekly={weekly} provider={provider} /><CreditsBlock usage={usage} dimmed={stale} /></> : null}
       {!disconnected && session?.used !== 100 ? (
         <>
           {showThresholdNotice && highestWindow !== undefined ? <StatusNotice window={highestWindow} /> : null}
           {usage.windows.map((window) => <UsageBlock key={window.kind.kind === "other" ? `other-${String(window.kind.minutes)}` : window.kind.kind} window={window} provider={provider} dimmed={stale} />)}
+          <CreditsBlock usage={usage} dimmed={stale} />
           {sparkline.length === 0 ? null : (
             <div className="provider-spark">
               <span><span><b className="cap">Today</b> · tokens on this Mac</span>{peakLabel === null || peakLabel === undefined ? null : <span>Peak {peakLabel}</span>}</span>

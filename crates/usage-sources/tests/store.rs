@@ -31,6 +31,7 @@ fn reading(used: f64, observed_at: UnixSeconds) -> Reading {
             observed_at,
         }],
         partial: false,
+        credits: None,
     }
 }
 

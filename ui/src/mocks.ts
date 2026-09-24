@@ -5,6 +5,7 @@
 import type { BridgeStatus } from "./bindings/BridgeStatus";
 import type { CodexDetection } from "./bindings/CodexDetection";
 import type { ConnectionStatus } from "./bindings/ConnectionStatus";
+import type { Credits } from "./bindings/Credits";
 import type { History } from "./bindings/History";
 import type { LimitWindow } from "./bindings/LimitWindow";
 import type { Provider } from "./bindings/Provider";
@@ -30,6 +31,14 @@ function limitWindow(provider: Provider, kind: "session" | "weekly", used: numbe
   };
 }
 
+/** Claude extra usage of $12.40 of $50.00, and 120.50 Codex credits. */
+function mockCredits(provider: Provider): Credits {
+  const observedAt = NOW - 90;
+  return provider === "claude"
+    ? { enabled: true, unlimited: false, used: { minor: 1_240, exponent: 2, currency: "USD" }, limit: { minor: 5_000, exponent: 2, currency: "USD" }, balance: null, source: "claudeOAuth", observedAt }
+    : { enabled: true, unlimited: false, used: null, limit: null, balance: { minor: 12_050, exponent: 2, currency: null }, source: "codexAppServer", observedAt };
+}
+
 export function mockProviderUsage(
   provider: Provider,
   status: ConnectionStatus = { state: "connected" },
@@ -50,6 +59,7 @@ export function mockProviderUsage(
     sources: provider === "claude"
       ? [{ source, status, lastSuccess: NOW - 12 }, { source: "claudeLocalLogs", status: { state: "connected" }, lastSuccess: NOW - 40 }]
       : [{ source, status, lastSuccess: NOW - 12 }, { source: "codexRollout", status: { state: "connected" }, lastSuccess: NOW - 3 }],
+    credits: mockCredits(provider),
   };
 }
 
@@ -120,7 +130,8 @@ export const MOCK_SETTINGS_STATE: SettingsState = {
     mainAlwaysOnTop: false,
     trayStyle: "Numbers",
     trayWindow: "Weekly",
-    widget: { visible: true, x: null, y: null, variant: "Pill", opacity: 0.75, windows: "Both" },
+    trayCredits: "Off",
+    widget: { visible: true, x: null, y: null, variant: "Pill", opacity: 0.75, windows: "Both", credits: "Off" },
     pollActiveSecs: 120,
     pollIdleSecs: 600,
   },

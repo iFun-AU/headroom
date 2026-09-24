@@ -186,6 +186,7 @@ fn reading_from_limits(
         plan: limits.plan_type.as_deref().and_then(display_plan),
         windows,
         partial: false,
+        credits: None,
     }))
 }
 

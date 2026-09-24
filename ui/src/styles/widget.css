@@ -107,6 +107,36 @@
   font-weight: 600;
 }
 
+/* Credits: an amount beside or in place of the limits. */
+.widget-pill__values > .widget-credit {
+  color: var(--label2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.widget-pill__values > .widget-credit[data-primary="true"] {
+  color: var(--provider-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.widget-stack__row > .widget-credit {
+  color: var(--provider-text);
+  font-size: 11px;
+  font-weight: 600;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+/* Three rows (both limits plus credits) only fit the fixed-size Stack when tighter. */
+.widget-stack__provider[data-rows="3"] {
+  gap: 4px;
+}
+
+.widget-credit-spacer {
+  display: block;
+}
+
 /* Names a stand-in window when the plan lacks the chosen one. */
 .widget-pill__values > .widget-window-tag {
   color: var(--label2);

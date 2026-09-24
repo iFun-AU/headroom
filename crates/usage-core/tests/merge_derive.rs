@@ -3,8 +3,9 @@
 #![allow(clippy::expect_used, clippy::too_many_lines)]
 
 use usage_core::{
-    ConnectionStatus, LimitWindow, Percent, Provider, Reading, SourceKind, State, UnixSeconds,
-    WindowKind, derive_provider_usage, derive_snapshot, ingest_reading, ingest_status,
+    ConnectionStatus, CreditAmount, Credits, LimitWindow, Percent, Provider, Reading, SourceKind,
+    State, UnixSeconds, WindowKind, derive_provider_usage, derive_snapshot, ingest_reading,
+    ingest_status,
 };
 
 const NOW: UnixSeconds = UnixSeconds(20_000);
@@ -43,6 +44,7 @@ fn reading(
         plan: plan.map(str::to_owned),
         windows,
         partial: false,
+        credits: None,
     }
 }
 
@@ -325,4 +327,103 @@ fn complete_snapshot_derives_both_providers_at_the_requested_time() {
         snapshot.codex.status,
         ConnectionStatus::NotConfigured { .. }
     ));
+}
+
+fn credits(source: SourceKind, observed_at: i64, spent: i64) -> Credits {
+    Credits {
+        enabled: true,
+        unlimited: false,
+        used: Some(CreditAmount {
+            minor: spent,
+            exponent: 2,
+            currency: Some("USD".to_owned()),
+        }),
+        limit: None,
+        balance: None,
+        source,
+        observed_at: UnixSeconds(observed_at),
+    }
+}
+
+fn claude(
+    source: SourceKind,
+    observed_at: i64,
+    credits: Option<Credits>,
+    partial: bool,
+) -> Reading {
+    Reading {
+        provider: Provider::Claude,
+        credits,
+        partial,
+        ..reading(
+            source,
+            observed_at,
+            None,
+            vec![window(
+                WindowKind::Session,
+                10.0,
+                Some(NOW.0 + 3_600),
+                source,
+                observed_at,
+            )],
+        )
+    }
+}
+
+#[test]
+fn credits_come_from_any_source_while_another_supplies_the_windows() {
+    let mut state = State::new();
+    let oauth = credits(SourceKind::ClaudeOAuth, NOW.0 - 120, 1_240);
+    assert!(ingest_reading(
+        &mut state,
+        claude(
+            SourceKind::ClaudeOAuth,
+            NOW.0 - 120,
+            Some(oauth.clone()),
+            false
+        ),
+    ));
+    assert!(ingest_reading(
+        &mut state,
+        claude(SourceKind::ClaudeStatusline, NOW.0 - 10, None, false),
+    ));
+
+    let usage = derive_provider_usage(&state, Provider::Claude, NOW);
+    assert_eq!(
+        usage.authoritative_source,
+        Some(SourceKind::ClaudeStatusline)
+    );
+    assert_eq!(usage.credits, Some(oauth));
+}
+
+#[test]
+fn sparse_readings_keep_credits_and_complete_readings_replace_them() {
+    let mut state = State::new();
+    let first = credits(SourceKind::ClaudeOAuth, NOW.0 - 300, 100);
+    assert!(ingest_reading(
+        &mut state,
+        claude(
+            SourceKind::ClaudeOAuth,
+            NOW.0 - 300,
+            Some(first.clone()),
+            false
+        ),
+    ));
+    assert!(ingest_reading(
+        &mut state,
+        claude(SourceKind::ClaudeOAuth, NOW.0 - 200, None, true),
+    ));
+    assert_eq!(
+        derive_provider_usage(&state, Provider::Claude, NOW).credits,
+        Some(first)
+    );
+
+    assert!(ingest_reading(
+        &mut state,
+        claude(SourceKind::ClaudeOAuth, NOW.0 - 100, None, false),
+    ));
+    assert_eq!(
+        derive_provider_usage(&state, Provider::Claude, NOW).credits,
+        None
+    );
 }

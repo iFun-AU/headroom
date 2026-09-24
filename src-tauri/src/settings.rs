@@ -74,6 +74,22 @@ pub enum WidgetWindows {
     Both,
 }
 
+/// Whether a surface shows paid usage (Claude extra usage, Codex credits).
+///
+/// A provider with nothing to show (extra usage off, no Codex credits) keeps
+/// showing its limit, even with [`CreditsDisplay::Only`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum CreditsDisplay {
+    /// Limits only.
+    #[default]
+    Off,
+    /// Credits beside the limits.
+    WithLimits,
+    /// Credits in place of the limits.
+    Only,
+}
+
 /// Persisted floating-widget presentation and position.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -91,6 +107,8 @@ pub struct WidgetSettings {
     pub opacity: f32,
     /// Limit windows shown for each provider.
     pub windows: WidgetWindows,
+    /// Whether the widget shows credits.
+    pub credits: CreditsDisplay,
 }
 
 impl Default for WidgetSettings {
@@ -102,6 +120,7 @@ impl Default for WidgetSettings {
             variant: WidgetVariant::Pill,
             opacity: 1.0,
             windows: WidgetWindows::Both,
+            credits: CreditsDisplay::Off,
         }
     }
 }
@@ -152,6 +171,8 @@ pub struct Settings {
     pub tray_style: TrayStyle,
     /// Limit window shown in the menu bar.
     pub tray_window: TrayWindow,
+    /// Whether the menu bar shows credits.
+    pub tray_credits: CreditsDisplay,
     /// Floating-widget settings.
     pub widget: WidgetSettings,
     /// Active polling interval, with a minimum of 60 seconds.
@@ -179,6 +200,7 @@ impl Default for Settings {
             main_always_on_top: false,
             tray_style: TrayStyle::Numbers,
             tray_window: TrayWindow::Weekly,
+            tray_credits: CreditsDisplay::Off,
             widget: WidgetSettings::default(),
             poll_active_secs: 120,
             poll_idle_secs: 600,

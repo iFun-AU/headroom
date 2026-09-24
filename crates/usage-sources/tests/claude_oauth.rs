@@ -107,6 +107,7 @@ fn snapshot(statusline_at: Option<UnixSeconds>) -> watch::Receiver<Arc<UsageSnap
                     observed_at: at,
                 }],
                 partial: false,
+                credits: None,
             },
         );
         assert!(ingested);

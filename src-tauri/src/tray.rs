@@ -14,12 +14,12 @@ use tauri::{
 };
 use tauri_plugin_positioner::{Position, WindowExt};
 use tracing::{info, warn};
-use usage_core::{ProviderUsage, UsageSnapshot, WindowKind, log_trunc};
+use usage_core::{CreditAmount, ProviderUsage, UsageSnapshot, WindowKind, log_trunc};
 
 use crate::{
     commands::{Route, WindowTarget, quit_app_impl, refresh_now_impl, show_window_impl},
     runtime::RuntimeState,
-    settings::{TrayStyle, TrayWindow},
+    settings::{CreditsDisplay, TrayStyle, TrayWindow},
 };
 
 const TRAY_ID: &str = "main";
@@ -154,14 +154,18 @@ pub fn refresh(app: &AppHandle) {
 
 /// Updates tray text and image only when their derived values change.
 pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
-    let (style, window) = app
+    let (style, window, credits) = app
         .try_state::<RuntimeState>()
         .map(|runtime| {
             let settings = runtime.settings.snapshot().settings;
-            (settings.tray_style, settings.tray_window)
+            (
+                settings.tray_style,
+                settings.tray_window,
+                settings.tray_credits,
+            )
         })
         .unwrap_or_default();
-    let next = presentation(snapshot, style, window, menu_bar(app));
+    let next = presentation(snapshot, style, window, credits, menu_bar(app));
     let Some(state) = app.try_state::<TrayState>() else {
         return;
     };
@@ -236,15 +240,27 @@ struct Shown {
     substitute: bool,
 }
 
+/// A provider's paid usage for the title (`short`) and tooltip (`long`),
+/// present only when there is something to show.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CreditText {
+    short: String,
+    long: String,
+}
+
 /// Numbers style titles each provider's chosen window (decision D-025) and the
 /// template badge reflects the highest window of any kind; Bars style draws
-/// the chosen windows as stacked bars with no title (decisions D-026, D-029).
-/// A substituted window is named in the title and tooltip, since the bars have
-/// room only for digits.
+/// the chosen windows as stacked bars (decisions D-026, D-029). A substituted
+/// window is named in the title and tooltip, since the bars have room only for
+/// digits. Credits are text: appended per provider in Numbers, the whole title
+/// in Bars, and in place of the limits (with the template icon) for
+/// [`CreditsDisplay::Only`], where a provider without credits keeps its limit
+/// (decision D-030).
 fn presentation(
     snapshot: &UsageSnapshot,
     style: TrayStyle,
     window: TrayWindow,
+    credits: CreditsDisplay,
     menu_bar: MenuBar,
 ) -> TrayPresentation {
     let highest = snapshot
@@ -261,10 +277,40 @@ fn presentation(
     };
     let claude = shown(&snapshot.claude, window);
     let codex = shown(&snapshot.codex, window);
-    let tooltip = tooltip(window, claude, codex);
-    if style == TrayStyle::Bars {
+    let credit_texts =
+        [("Claude", &snapshot.claude), ("Codex", &snapshot.codex)].map(|(name, usage)| {
+            (credits != CreditsDisplay::Off)
+                .then(|| credit_text(name, usage))
+                .flatten()
+        });
+    let mut tooltip = tooltip(window, claude, codex);
+    let credit_lines = credit_texts
+        .iter()
+        .flatten()
+        .map(|text| text.long.as_str())
+        .collect::<Vec<_>>();
+    if !credit_lines.is_empty() {
+        if tooltip == "Headroom" {
+            tooltip.clear();
+        } else {
+            tooltip.push('\n');
+        }
+        tooltip.push_str(&credit_lines.join(", "));
+    }
+    let [claude_credits, codex_credits] = credit_texts;
+    let providers = [("C", claude, claude_credits), ("X", codex, codex_credits)];
+
+    if style == TrayStyle::Bars && credits != CreditsDisplay::Only {
+        let title = providers
+            .iter()
+            .filter_map(|(short, _, credit)| {
+                credit
+                    .as_ref()
+                    .map(|credit| format!("{short} {}", credit.short))
+            })
+            .collect::<Vec<_>>();
         return TrayPresentation {
-            title: String::new(),
+            title: padded_title(&title),
             tooltip,
             image: TrayImage::Bars {
                 claude: claude.map(|shown| round_percent(shown.used)),
@@ -273,27 +319,95 @@ fn presentation(
             },
         };
     }
-    let title = [("C", claude), ("X", codex)]
-        .into_iter()
-        .filter_map(|(short, shown)| {
-            shown.map(|shown| {
-                if shown.substitute {
-                    format!("{short} {} {:.0}%", short_label(shown.kind), shown.used)
-                } else {
-                    format!("{short} {:.0}%", shown.used)
+    let title = providers
+        .iter()
+        .filter_map(|(short, shown, credit)| {
+            let limit = shown.map(limit_text);
+            let value = match (credits, limit, credit) {
+                (CreditsDisplay::Only, _, Some(credit)) | (_, None, Some(credit)) => {
+                    credit.short.clone()
                 }
-            })
+                (CreditsDisplay::WithLimits, Some(limit), Some(credit)) => {
+                    format!("{limit} {}", credit.short)
+                }
+                (_, Some(limit), _) => limit,
+                (_, None, None) => return None,
+            };
+            Some(format!("{short} {value}"))
         })
-        .collect::<Vec<_>>()
-        .join(" · ");
+        .collect::<Vec<_>>();
     TrayPresentation {
-        title: if title.is_empty() {
-            title
-        } else {
-            format!(" {title}")
-        },
+        title: padded_title(&title),
         tooltip,
         image: TrayImage::Template(icon),
+    }
+}
+
+fn limit_text(shown: Shown) -> String {
+    if shown.substitute {
+        format!("{} {:.0}%", short_label(shown.kind), shown.used)
+    } else {
+        format!("{:.0}%", shown.used)
+    }
+}
+
+/// Joins provider parts with a leading space that separates them from the icon.
+fn padded_title(parts: &[String]) -> String {
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!(" {}", parts.join(" · "))
+    }
+}
+
+/// Claude reports extra-usage spending (`used`, optional `limit`); Codex
+/// reports a credit balance or unlimited credits. Nothing is shown when extra
+/// usage is off or the account has no credits.
+fn credit_text(name: &str, usage: &ProviderUsage) -> Option<CreditText> {
+    let credits = usage.credits.as_ref()?;
+    if let Some(used) = credits.used.as_ref().filter(|_| credits.enabled) {
+        let spent = format_amount(used);
+        let long = credits.limit.as_ref().map_or_else(
+            || format!("{name} extra usage {spent}"),
+            |limit| format!("{name} extra usage {spent} of {}", format_amount(limit)),
+        );
+        return Some(CreditText { short: spent, long });
+    }
+    if credits.unlimited {
+        return Some(CreditText {
+            short: "∞ cr".to_owned(),
+            long: format!("{name} credits unlimited"),
+        });
+    }
+    let balance = credits.balance.as_ref().filter(|_| credits.enabled)?;
+    let amount = format_amount(balance);
+    Some(CreditText {
+        short: format!("{amount} cr"),
+        long: format!("{name} credits {amount}"),
+    })
+}
+
+/// Formats exact minor units, e.g. `$12.40`, `€3.00`, `12.40 AUD`, or `120`.
+fn format_amount(amount: &CreditAmount) -> String {
+    let sign = if amount.minor < 0 { "-" } else { "" };
+    let magnitude = amount.minor.unsigned_abs();
+    let number = if amount.exponent == 0 {
+        magnitude.to_string()
+    } else {
+        let scale = 10_u64.pow(u32::from(amount.exponent));
+        format!(
+            "{}.{:0width$}",
+            magnitude / scale,
+            magnitude % scale,
+            width = usize::from(amount.exponent)
+        )
+    };
+    match amount.currency.as_deref() {
+        None => format!("{sign}{number}"),
+        Some("USD") => format!("{sign}${number}"),
+        Some("EUR") => format!("{sign}€{number}"),
+        Some("GBP") => format!("{sign}£{number}"),
+        Some(code) => format!("{sign}{number} {code}"),
     }
 }
 
@@ -441,12 +555,12 @@ mod tests {
     #![allow(clippy::expect_used)]
 
     use usage_core::{
-        ConnectionStatus, LimitWindow, Percent, Provider, ProviderUsage, SourceKind, UnixSeconds,
-        UsageSnapshot, WindowKind,
+        ConnectionStatus, CreditAmount, Credits, LimitWindow, Percent, Provider, ProviderUsage,
+        SourceKind, UnixSeconds, UsageSnapshot, WindowKind,
     };
 
     use super::{MenuBar, TrayIconState, TrayImage, presentation};
-    use crate::settings::{TrayStyle, TrayWindow};
+    use crate::settings::{CreditsDisplay, TrayStyle, TrayWindow};
     use WindowKind::{Session, Weekly};
 
     #[test]
@@ -500,6 +614,7 @@ mod tests {
             &fixture,
             TrayStyle::Numbers,
             TrayWindow::FiveHour,
+            CreditsDisplay::Off,
             MenuBar::Dark,
         );
         assert_eq!(result.title, " C 62% · X wk 78%");
@@ -512,6 +627,7 @@ mod tests {
             &fixture,
             TrayStyle::Bars,
             TrayWindow::FiveHour,
+            CreditsDisplay::Off,
             MenuBar::Dark,
         );
         assert_eq!(bars.title, "");
@@ -531,6 +647,7 @@ mod tests {
             &snapshot(&[(Session, 99.0), (Weekly, 41.4)], &[(Weekly, 77.6)]),
             TrayStyle::Bars,
             TrayWindow::Weekly,
+            CreditsDisplay::Off,
             MenuBar::Dark,
         );
         assert_eq!(result.title, "");
@@ -548,6 +665,7 @@ mod tests {
             &snapshot(&[], &[]),
             TrayStyle::Bars,
             TrayWindow::Weekly,
+            CreditsDisplay::Off,
             MenuBar::Light,
         );
         assert_eq!(
@@ -561,11 +679,132 @@ mod tests {
         assert_eq!(empty.tooltip, "Headroom");
     }
 
+    fn money(minor: i64, currency: Option<&str>, exponent: u8) -> CreditAmount {
+        CreditAmount {
+            minor,
+            exponent,
+            currency: currency.map(str::to_owned),
+        }
+    }
+
+    fn with_credits(mut snapshot: UsageSnapshot) -> UsageSnapshot {
+        snapshot.claude.credits = Some(Credits {
+            enabled: true,
+            unlimited: false,
+            used: Some(money(1_240, Some("USD"), 2)),
+            limit: Some(money(5_000, Some("USD"), 2)),
+            balance: None,
+            source: SourceKind::ClaudeOAuth,
+            observed_at: UnixSeconds(1),
+        });
+        snapshot.codex.credits = Some(Credits {
+            enabled: false,
+            unlimited: false,
+            used: None,
+            limit: None,
+            balance: Some(money(0, None, 0)),
+            source: SourceKind::CodexAppServer,
+            observed_at: UnixSeconds(1),
+        });
+        snapshot
+    }
+
+    #[test]
+    fn credits_join_the_limits_or_replace_them() {
+        let fixture = with_credits(snapshot(&[(Weekly, 41.0)], &[(Weekly, 78.0)]));
+        let with = presentation(
+            &fixture,
+            TrayStyle::Numbers,
+            TrayWindow::Weekly,
+            CreditsDisplay::WithLimits,
+            MenuBar::Dark,
+        );
+        assert_eq!(with.title, " C 41% $12.40 · X 78%");
+        assert_eq!(
+            with.tooltip,
+            "Weekly limits: Claude 41%, Codex 78%\nClaude extra usage $12.40 of $50.00"
+        );
+
+        // Codex has no credits, so it keeps its limit even when credits replace limits.
+        let only = presentation(
+            &fixture,
+            TrayStyle::Bars,
+            TrayWindow::Weekly,
+            CreditsDisplay::Only,
+            MenuBar::Dark,
+        );
+        assert_eq!(only.title, " C $12.40 · X 78%");
+        assert_eq!(only.image, TrayImage::Template(TrayIconState::Warning));
+
+        let bars = presentation(
+            &fixture,
+            TrayStyle::Bars,
+            TrayWindow::Weekly,
+            CreditsDisplay::WithLimits,
+            MenuBar::Dark,
+        );
+        assert_eq!(bars.title, " C $12.40");
+        assert!(matches!(bars.image, TrayImage::Bars { .. }));
+
+        let off = presentation(
+            &fixture,
+            TrayStyle::Numbers,
+            TrayWindow::Weekly,
+            CreditsDisplay::Off,
+            MenuBar::Dark,
+        );
+        assert_eq!(off.title, " C 41% · X 78%");
+        assert_eq!(off.tooltip, "Weekly limits: Claude 41%, Codex 78%");
+    }
+
+    #[test]
+    fn credit_amounts_are_exact_and_codex_balances_are_credits() {
+        assert_eq!(super::format_amount(&money(5, Some("USD"), 2)), "$0.05");
+        assert_eq!(super::format_amount(&money(300, Some("EUR"), 2)), "€3.00");
+        assert_eq!(
+            super::format_amount(&money(1_240, Some("AUD"), 2)),
+            "12.40 AUD"
+        );
+        assert_eq!(super::format_amount(&money(-7, Some("GBP"), 1)), "-£0.7");
+        assert_eq!(super::format_amount(&money(120, None, 0)), "120");
+
+        let mut fixture = snapshot(&[], &[]);
+        fixture.codex.credits = Some(Credits {
+            enabled: true,
+            unlimited: false,
+            used: None,
+            limit: None,
+            balance: Some(money(12_050, None, 2)),
+            source: SourceKind::CodexAppServer,
+            observed_at: UnixSeconds(1),
+        });
+        let only = presentation(
+            &fixture,
+            TrayStyle::Numbers,
+            TrayWindow::Weekly,
+            CreditsDisplay::Only,
+            MenuBar::Dark,
+        );
+        assert_eq!(only.title, " X 120.50 cr");
+        assert_eq!(only.tooltip, "Codex credits 120.50");
+
+        fixture.codex.credits.as_mut().expect("set above").unlimited = true;
+        let unlimited = presentation(
+            &fixture,
+            TrayStyle::Numbers,
+            TrayWindow::Weekly,
+            CreditsDisplay::Only,
+            MenuBar::Dark,
+        );
+        assert_eq!(unlimited.title, " X ∞ cr");
+    }
+
     fn numbers(snapshot: &UsageSnapshot) -> super::TrayPresentation {
         presentation(
             snapshot,
             TrayStyle::Numbers,
             TrayWindow::Weekly,
+            CreditsDisplay::Off,
             MenuBar::Dark,
         )
     }
@@ -601,6 +840,7 @@ mod tests {
             authoritative_source: Some(source),
             last_updated: Some(UnixSeconds(1)),
             sources: Vec::new(),
+            credits: None,
         }
     }
 }

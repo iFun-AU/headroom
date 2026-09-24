@@ -132,7 +132,9 @@ fn apply_window_settings(app: &AppHandle, next: &Settings, previous: Option<&Set
         apply_activation_policy(app, next.show_dock_icon);
     }
     if previous.is_some_and(|previous| {
-        previous.tray_style != next.tray_style || previous.tray_window != next.tray_window
+        previous.tray_style != next.tray_style
+            || previous.tray_window != next.tray_window
+            || previous.tray_credits != next.tray_credits
     }) {
         crate::tray::refresh(app);
     }

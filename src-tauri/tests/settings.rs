@@ -5,8 +5,9 @@
 use std::{fs, path::Path};
 
 use headroom::settings::{
-    CURRENT_SCHEMA_VERSION, Settings, SettingsActorError, SettingsHandle, TrayWindow,
-    WidgetVariant, WidgetWindows, load_settings, migrate, reset_settings, save_settings,
+    CURRENT_SCHEMA_VERSION, CreditsDisplay, Settings, SettingsActorError, SettingsHandle,
+    TrayWindow, WidgetVariant, WidgetWindows, load_settings, migrate, reset_settings,
+    save_settings,
 };
 use serde_json::{Value, json};
 use tempfile::tempdir;
@@ -49,7 +50,7 @@ fn pure_v0_migration_adds_version_and_preserves_known_values() {
 }
 
 #[test]
-fn v1_file_without_window_choices_keeps_previous_display() {
+fn v1_file_without_window_or_credit_choices_keeps_previous_display() {
     let settings = migrate(json!({
         "schemaVersion": 1,
         "trayStyle": "Bars",
@@ -59,6 +60,8 @@ fn v1_file_without_window_choices_keeps_previous_display() {
 
     assert_eq!(settings.tray_window, TrayWindow::Weekly);
     assert_eq!(settings.widget.windows, WidgetWindows::Both);
+    assert_eq!(settings.tray_credits, CreditsDisplay::Off);
+    assert_eq!(settings.widget.credits, CreditsDisplay::Off);
     assert_eq!(settings.widget.variant, WidgetVariant::Stack);
 }
 

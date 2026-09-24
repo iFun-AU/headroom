@@ -15,9 +15,9 @@ pub mod parse;
 
 pub use alerts::{Alert, AlertKind, AlertTracker};
 pub use domain::{
-    Bucket, ConnectionStatus, History, HistoryScope, LimitWindow, Percent, PercentError,
-    Projection, Provider, ProviderUsage, Series, SourceHealth, SourceKind, TokenCount, UnixSeconds,
-    UsageSnapshot, WindowKind, WindowMinutes, log_trunc,
+    Bucket, ConnectionStatus, CreditAmount, Credits, History, HistoryScope, LimitWindow, Percent,
+    PercentError, Projection, Provider, ProviderUsage, Series, SourceHealth, SourceKind,
+    TokenCount, UnixSeconds, UsageSnapshot, WindowKind, WindowMinutes, log_trunc,
 };
 pub use history::{DailyBuckets, HistoryMetrics, HistoryStore, TokenEvent};
 pub use merge::{

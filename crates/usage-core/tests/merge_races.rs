@@ -44,6 +44,7 @@ fn reading(
         plan: plan.map(str::to_owned),
         windows,
         partial,
+        credits: None,
     }
 }
 

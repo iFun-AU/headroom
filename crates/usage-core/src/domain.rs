@@ -146,6 +146,41 @@ pub struct LimitWindow {
     pub observed_at: UnixSeconds,
 }
 
+/// An amount of money or provider credits, kept in exact minor units.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreditAmount {
+    /// The amount in minor units; the value is `minor / 10^exponent`.
+    #[ts(type = "number")]
+    pub minor: i64,
+    /// Decimal places represented in `minor`.
+    pub exponent: u8,
+    /// ISO 4217 currency code such as `USD`, or `None` for provider credits.
+    pub currency: Option<String>,
+}
+
+/// Paid usage beyond plan limits: Claude extra usage or Codex credits.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Credits {
+    /// Claude: extra usage is turned on. Codex: the account has credits.
+    pub enabled: bool,
+    /// Codex plans whose credits are unlimited.
+    pub unlimited: bool,
+    /// Amount spent in the current billing period (Claude).
+    pub used: Option<CreditAmount>,
+    /// Spending cap for the current billing period (Claude).
+    pub limit: Option<CreditAmount>,
+    /// Remaining prepaid balance (Codex).
+    pub balance: Option<CreditAmount>,
+    /// The source that reported these credits.
+    pub source: SourceKind,
+    /// When the source observed these credits.
+    pub observed_at: UnixSeconds,
+}
+
 /// Connection and data-health state for a provider source.
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
 #[serde(tag = "state", rename_all = "camelCase")]
@@ -214,6 +249,8 @@ pub struct ProviderUsage {
     pub last_updated: Option<UnixSeconds>,
     /// One health entry per source configured for this provider.
     pub sources: Vec<SourceHealth>,
+    /// The newest credit information any source reported, when available.
+    pub credits: Option<Credits>,
 }
 
 /// A point-in-time usage view for every supported provider.

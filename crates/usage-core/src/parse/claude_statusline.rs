@@ -69,6 +69,7 @@ pub fn parse_claude_statusline(
         plan: None,
         windows,
         partial: false,
+        credits: None,
     }))
 }
 

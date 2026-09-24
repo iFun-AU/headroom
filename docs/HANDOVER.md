@@ -157,6 +157,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
   Expected: no output and exit status 1. Inspect any match as sensitive; do not paste it into an issue or commit.
 
 - [ ] **Claude usage API (M9, D-023/D-024):** a default build shows no usage-API group, Keychain prompt, `reqwest`, or `security-framework` path. In a `--features claude-oauth` build, enable **Settings → Accounts → Claude usage API**, choose **Always Allow** at the Keychain prompt, and compare the Claude Session and Weekly percentages with Claude Code's `/usage`. Expected: they match within a point (this confirms the unverified 0–100 `utilization` scale), plan shows the subscription name, and the Claude card works with only desktop-app sessions active.
+- [ ] **Credits (D-030):** with the Claude usage API on, compare the dashboard's Claude "Extra usage" amount and limit with Claude's own usage page, and the Codex "Credits" balance with Codex's. Expected: they match; if Claude's amount is off by a factor of 100 or is not this month's spend, the `spend` mapping in `parse/claude_oauth.rs` needs correcting.
 
 ## 4. Native look and macOS behavior
 

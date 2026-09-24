@@ -61,6 +61,22 @@
   font-size: 13px;
 }
 
+.credits-block__amount {
+  color: var(--provider-text);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.credits-block__amount[data-provider="claude"] { --provider-text: var(--claude-text); }
+.credits-block__amount[data-provider="codex"] { --provider-text: var(--codex-text); }
+.credits-block__amount[data-dimmed="true"] { opacity: 0.55; }
+
+.credits-block__amount small {
+  color: var(--label2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .usage-block__reset {
   align-items: center;
   color: var(--label2);

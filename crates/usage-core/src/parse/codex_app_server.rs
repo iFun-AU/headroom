@@ -1,12 +1,18 @@
 use std::collections::BTreeMap;
 
 use serde::Deserialize;
+use serde_json::Value;
 
 use super::{Result, display_plan};
-use crate::{LimitWindow, Percent, Provider, Reading, SourceKind, UnixSeconds, classify};
+use crate::{
+    CreditAmount, Credits, LimitWindow, Percent, Provider, Reading, SourceKind, UnixSeconds,
+    classify,
+};
 
 const RATE_LIMITS_UPDATED_METHOD: &str = "account/rateLimits/updated";
 const CODEX_LIMIT_ID: &str = "codex";
+/// Balances with more decimal places are not plausible and are ignored.
+const MAX_BALANCE_DECIMALS: usize = 6;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -41,6 +47,9 @@ struct RateLimitSnapshotDto {
     primary: Option<RateLimitWindowDto>,
     secondary: Option<RateLimitWindowDto>,
     plan_type: Option<String>,
+    /// `{hasCredits, unlimited, balance}`; untyped so a shape change drops
+    /// only the credits.
+    credits: Option<Value>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
@@ -143,6 +152,46 @@ fn reading_from_snapshot(
         plan: snapshot.plan_type.as_deref().and_then(display_plan),
         windows,
         partial,
+        credits: snapshot
+            .credits
+            .as_ref()
+            .and_then(|credits| credits_from_dto(credits, observed_at)),
+    })
+}
+
+/// Reads `{hasCredits, unlimited, balance}`; `balance` is a decimal string
+/// such as `"0"` or `"12.5"` in Codex credits.
+fn credits_from_dto(credits: &Value, observed_at: UnixSeconds) -> Option<Credits> {
+    Some(Credits {
+        enabled: credits.get("hasCredits")?.as_bool()?,
+        unlimited: credits.get("unlimited")?.as_bool()?,
+        used: None,
+        limit: None,
+        balance: credits
+            .get("balance")
+            .and_then(Value::as_str)
+            .and_then(parse_balance),
+        source: SourceKind::CodexAppServer,
+        observed_at,
+    })
+}
+
+/// Parses a non-negative decimal string exactly into minor units.
+fn parse_balance(text: &str) -> Option<CreditAmount> {
+    let (whole, fraction) = text.trim().split_once('.').unwrap_or((text.trim(), ""));
+    let digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
+    if whole.is_empty()
+        || !digits(whole)
+        || !digits(fraction)
+        || fraction.len() > MAX_BALANCE_DECIMALS
+    {
+        return None;
+    }
+    let minor = format!("{whole}{fraction}").parse::<i64>().ok()?;
+    Some(CreditAmount {
+        minor,
+        exponent: u8::try_from(fraction.len()).ok()?,
+        currency: None,
     })
 }
 

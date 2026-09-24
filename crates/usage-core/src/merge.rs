@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    ConnectionStatus, LimitWindow, Percent, Provider, ProviderUsage, SourceHealth, SourceKind,
-    UnixSeconds, UsageSnapshot, WindowKind,
+    ConnectionStatus, Credits, LimitWindow, Percent, Provider, ProviderUsage, SourceHealth,
+    SourceKind, UnixSeconds, UsageSnapshot, WindowKind,
 };
 
 const FRESH_SECONDS: i64 = 15 * 60;
@@ -26,6 +26,8 @@ pub struct Reading {
     pub windows: Vec<LimitWindow>,
     /// Whether this is a sparse upsert rather than a complete source snapshot.
     pub partial: bool,
+    /// Credit information in this message, when the source reports it.
+    pub credits: Option<Credits>,
 }
 
 /// Last-known state for one provider source.
@@ -39,6 +41,8 @@ pub struct SourceState {
     pub plan: Option<String>,
     /// Last-known windows keyed by their classified kind.
     pub windows: BTreeMap<WindowKind, LimitWindow>,
+    /// Last-known credit information from this source.
+    pub credits: Option<Credits>,
 }
 
 impl SourceState {
@@ -50,6 +54,7 @@ impl SourceState {
             observed_at: None,
             plan: None,
             windows: BTreeMap::new(),
+            credits: None,
         }
     }
 }
@@ -92,6 +97,11 @@ pub fn ingest_reading(state: &mut State, reading: Reading) -> bool {
             .collect();
     }
 
+    // A complete reading without credits means the source stopped reporting
+    // them; a sparse one simply did not mention them.
+    if !reading.partial || reading.credits.is_some() {
+        source_state.credits = reading.credits;
+    }
     if let Some(plan) = reading.plan {
         source_state.plan = Some(plan);
     }
@@ -145,6 +155,13 @@ pub fn derive_provider_usage(state: &State, provider: Provider, now: UnixSeconds
                 .find_map(|(_, source_state)| source_state.plan.clone())
         });
     let status = derive_status(authoritative, highest_priority, now);
+    // Credits are independent of limit authority: only the Claude usage API
+    // reports them, even while the status line supplies the windows.
+    let credits = configured
+        .iter()
+        .filter_map(|(_, source_state)| source_state.credits.as_ref())
+        .max_by_key(|credits| credits.observed_at)
+        .cloned();
     let sources = configured
         .iter()
         .map(|(source, source_state)| SourceHealth {
@@ -162,6 +179,7 @@ pub fn derive_provider_usage(state: &State, provider: Provider, now: UnixSeconds
         authoritative_source: authoritative.map(|(source, _)| *source),
         last_updated: authoritative.and_then(|(_, source_state)| source_state.observed_at),
         sources,
+        credits,
     }
 }
 

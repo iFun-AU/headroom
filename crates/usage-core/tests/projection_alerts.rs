@@ -36,6 +36,7 @@ fn provider_usage(provider: Provider, windows: Vec<LimitWindow>) -> ProviderUsag
         authoritative_source: None,
         last_updated: None,
         sources: Vec::new(),
+        credits: None,
     }
 }
 
