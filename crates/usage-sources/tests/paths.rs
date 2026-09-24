@@ -25,15 +25,15 @@ fn defaults_are_derived_from_supplied_roots() {
     );
     assert_eq!(
         paths.app_support,
-        PathBuf::from("/test/data/dev.howisit.app")
+        PathBuf::from("/test/data/dev.headroom.app")
     );
     assert_eq!(
         paths.bridge_rate_limits,
-        PathBuf::from("/test/data/dev.howisit.app/claude-rate-limits.json")
+        PathBuf::from("/test/data/dev.headroom.app/claude-rate-limits.json")
     );
     assert_eq!(
         paths.logs,
-        PathBuf::from("/test/home/Library/Logs/dev.howisit.app")
+        PathBuf::from("/test/home/Library/Logs/dev.headroom.app")
     );
 }
 

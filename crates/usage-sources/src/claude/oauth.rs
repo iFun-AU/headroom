@@ -81,7 +81,7 @@ impl ReqwestUsageHttp {
     /// Returns [`HttpError::Client`] if TLS initialization fails.
     pub fn new(app_version: &str) -> Result<Self, HttpError> {
         let client = reqwest::Client::builder()
-            .user_agent(format!("how-is-it/{app_version}"))
+            .user_agent(format!("headroom/{app_version}"))
             .timeout(REQUEST_TIMEOUT)
             .redirect(reqwest::redirect::Policy::none())
             .https_only(true)

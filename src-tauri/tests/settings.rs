@@ -4,7 +4,7 @@
 
 use std::{fs, path::Path};
 
-use how_is_it::settings::{
+use headroom::settings::{
     CURRENT_SCHEMA_VERSION, Settings, SettingsActorError, SettingsHandle, WidgetVariant,
     load_settings, migrate, reset_settings, save_settings,
 };

@@ -3,7 +3,7 @@
 > **Status (2026-09-23): superseded by `DEVELOPMENT.md` v2.1.** The finalised spec keeps token history as the Claude / Codex detail-tab charts. Every series is labelled with its scope ("on this Mac" or "account", §7.5). There's no limit or pace line on token charts, and projection is percentage-based only. The fork-safe counting rule and the UTC-day finding below were folded into §2.1 / §2.2 / §7.5. This file is kept as the research record.
 
 > **Author:** AI Assistant · **Date:** 2026-09-23 · **Tested with:** Claude Code 2.1.273, codex-cli 0.154.0, macOS 27.0
-> **Question:** Can How Is It show token usage, not just the % of plan limits?
+> **Question:** Can Headroom show token usage, not just the % of plan limits?
 
 ## Short answer
 

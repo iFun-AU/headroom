@@ -1,4 +1,4 @@
-//! Build script for the How Is It Tauri application.
+//! Build script for the Headroom Tauri application.
 
 fn main() {
     tauri_build::build();

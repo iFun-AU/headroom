@@ -282,7 +282,7 @@ fn weekly_tooltip(claude: Option<f64>, codex: Option<f64>) -> String {
         .filter_map(|(name, used)| used.map(|used| format!("{name} {used:.0}%")))
         .collect::<Vec<_>>();
     if parts.is_empty() {
-        "How Is It".to_owned()
+        "Headroom".to_owned()
     } else {
         format!("Weekly limits: {}", parts.join(", "))
     }
@@ -454,7 +454,7 @@ mod tests {
                 menu_bar: MenuBar::Light,
             }
         );
-        assert_eq!(empty.tooltip, "How Is It");
+        assert_eq!(empty.tooltip, "Headroom");
     }
 
     fn numbers(snapshot: &UsageSnapshot) -> super::TrayPresentation {

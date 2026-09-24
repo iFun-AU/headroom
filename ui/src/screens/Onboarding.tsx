@@ -25,7 +25,7 @@ interface OnboardingProps {
 }
 
 const STEP_COPY: Readonly<Record<1 | 2 | 3, { readonly icon: IconName; readonly title: string; readonly body: string }>> = {
-  1: { icon: "search", title: "Find Codex", body: "How Is It shows your Codex session and weekly limits from the Codex CLI on this Mac." },
+  1: { icon: "search", title: "Find Codex", body: "Headroom shows your Codex session and weekly limits from the Codex CLI on this Mac." },
   2: { icon: "bell", title: "Real-time Claude updates", body: "Claude Code can report your limits after every response through its status line." },
   3: { icon: "bell", title: "Notifications", body: "Get a heads-up before you run out, and when a limit resets." },
 };
@@ -43,7 +43,7 @@ function ClaudeExplanation() {
   const items: readonly [IconName, string][] = [
     ["gear", "Adds a status line command to ~/.claude/settings.json. Any status line you already use keeps running after ours."],
     ["info", "While a custom status line is set, Claude Code hides most footer keyboard hints."],
-    ["warning", "A project or organization setting can override it. If updates stop arriving, How Is It tells you."],
+    ["warning", "A project or organization setting can override it. If updates stop arriving, Headroom tells you."],
     ["refresh", "You can turn it off at any time in Settings → Accounts; your previous status line is restored."],
   ];
   return <section className="onboarding-explanation card">{items.map(([icon, text]) => <p key={text}><Icon name={icon} size={15} /><span>{text}</span></p>)}</section>;
@@ -83,7 +83,7 @@ export function Onboarding({ navigate, fixtureState, fixtureDetection, fixtureBr
 
   return (
     <main className="onboarding-root glass">
-      <RouteToolbar title="Welcome to How Is It" right={<StepDots step={step} />} />
+      <RouteToolbar title="Welcome to Headroom" right={<StepDots step={step} />} />
       <div className="onboarding-content">
         <StepHeader step={step} />
         {step === 1 ? <SettingsGroup><SettingsRow label="Codex CLI" description={detection?.path ?? settings?.codexPath ?? "Automatic discovery"} leading={<ServiceBadge provider="codex" size="regular" />}><StatusChip tone={detection === null || detection.path === null ? "neutral" : "ok"}>{detection?.path === null ? "Not found" : detection === null ? "Detecting…" : `Found${detection.version === null ? "" : ` · ${detection.version}`}`}</StatusChip></SettingsRow><SettingsRow label="Not the right one?"><button className="capsule-button ctl" onClick={runDetection}>Detect Again</button><button className="capsule-button ctl" onClick={browse}>Browse…</button></SettingsRow><footer>Limits are read through <span className="mono">codex app-server</span>. Your Codex sign-in stays with Codex.</footer></SettingsGroup> : null}

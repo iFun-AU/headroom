@@ -2,7 +2,7 @@
 
 ## Product in five lines
 
-1. How Is It is a macOS 26+ menu-bar app that shows Claude and Codex plan-limit usage.
+1. Headroom is a macOS 26+ menu-bar app that shows Claude and Codex plan-limit usage.
 2. Session and weekly percentages use real-time push where possible, with Codex polling and file events as fallback.
 3. Token charts report observed activity, labelled honestly as either this Mac or the Codex account; they never imply a token quota.
 4. The product has a main dashboard, a tray popover, and an optional always-on-top widget, all backed by one Rust store.

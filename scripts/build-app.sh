@@ -1,19 +1,19 @@
 #!/bin/sh
-# Builds, ad-hoc signs and verifies the local universal How Is It app.
+# Builds, ad-hoc signs and verifies the local universal Headroom app.
 #
 # Usage: scripts/build-app.sh [--no-oauth] [--icons] [--clean] [--install]
 #   --no-oauth  build without the opt-in Claude usage API (claude-oauth feature)
 #   --icons     regenerate bundle icons from src-tauri/icons/app-icon.svg
 #               (requires rsvg-convert, e.g. `brew install librsvg`)
 #   --clean     remove build caches and temp files first (full rebuild)
-#   --install   replace /Applications/How Is It.app and launch it
+#   --install   replace /Applications/Headroom.app and launch it
 set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 target="universal-apple-darwin"
-app="$repo_dir/target/$target/release/bundle/macos/How Is It.app"
-installed="/Applications/How Is It.app"
+app="$repo_dir/target/$target/release/bundle/macos/Headroom.app"
+installed="/Applications/Headroom.app"
 
 oauth=1
 icons=0
@@ -80,7 +80,7 @@ codesign --force --deep -s - "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 
 step "Verifying architectures"
-for executable in how-is-it howisit-statusline; do
+for executable in headroom headroom-statusline; do
   archs=$(lipo -archs "$app/Contents/MacOS/$executable")
   case "$archs" in
     *x86_64*arm64*|*arm64*x86_64*) echo "$executable: $archs" ;;
@@ -90,14 +90,14 @@ done
 
 if [ "$install" -eq 1 ]; then
   step "Installing to /Applications"
-  if pgrep -x how-is-it >/dev/null; then
-    osascript -e 'tell application id "dev.howisit.app" to quit' >/dev/null 2>&1 || true
+  if pgrep -x headroom >/dev/null; then
+    osascript -e 'tell application id "dev.headroom.app" to quit' >/dev/null 2>&1 || true
     attempts=0
-    while pgrep -x how-is-it >/dev/null && [ "$attempts" -lt 20 ]; do
+    while pgrep -x headroom >/dev/null && [ "$attempts" -lt 20 ]; do
       sleep 0.5
       attempts=$((attempts + 1))
     done
-    pgrep -x how-is-it >/dev/null && fail "How Is It is still running; quit it and retry"
+    pgrep -x headroom >/dev/null && fail "Headroom is still running; quit it and retry"
   fi
   rm -rf "$installed"
   ditto "$app" "$installed"

@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use how_is_it::forwarder::forward_snapshots;
+use headroom::forwarder::forward_snapshots;
 use tokio::{sync::mpsc, time::Duration};
 use tokio_util::sync::CancellationToken;
 use usage_core::{State, UnixSeconds, UsageSnapshot, derive_snapshot};

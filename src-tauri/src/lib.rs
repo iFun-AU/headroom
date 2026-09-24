@@ -1,4 +1,4 @@
-//! Tauri application shell for How Is It.
+//! Tauri application shell for Headroom.
 
 use std::{io, path::PathBuf};
 
@@ -73,7 +73,7 @@ pub fn run() -> tauri::Result<()> {
             let roots = runtime::RuntimeRoots::new(
                 home,
                 data,
-                PathBuf::from(executable_dir).join("howisit-statusline"),
+                PathBuf::from(executable_dir).join("headroom-statusline"),
             );
             let default_paths = roots.paths(&settings::Settings::default());
             let log_guard = logging::init(&default_paths.logs)?;

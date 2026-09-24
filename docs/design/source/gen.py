@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 @file gen.py
-@description Generates the "How Is It" Design canvas: one .dc.html per artboard plus
+@description Generates the "Headroom" Design canvas: one .dc.html per artboard plus
              project/canvas.json. Shared building blocks (neon bar, glass card, charts,
              menu bar icon) are Python functions so every artboard stays consistent;
              theming is done with CSS custom properties (.t-dark / .t-light).
@@ -336,10 +336,10 @@ def battery():
 
 
 def menubar(active=False, pct=62, state=0):
-    """Transparent Tahoe menu bar with the How Is It status item."""
+    """Transparent Tahoe menu bar with the Headroom status item."""
     left = "".join(f'<span style="font-weight:{700 if i == 0 else 500};">{t}</span>'
                    for i, t in enumerate(["Finder", "File", "Edit", "View", "Go", "Window", "Help"]))
-    item = (f'<button aria-label="How Is It, highest usage {pct} percent" aria-expanded="{"true" if active else "false"}" '
+    item = (f'<button aria-label="Headroom, highest usage {pct} percent" aria-expanded="{"true" if active else "false"}" '
             f'style="display:flex;align-items:center;">{status_item(pct, state, 1.0, "var(--mb)", active)}</button>')
     right = (f'{item}{battery()}{icon("wifi", 17, "var(--mb)", 2)}{icon("search", 16, "var(--mb)", 2)}{icon("cc", 17, "var(--mb)", 1.8)}'
              f'<span class="num" style="font-weight:500;">Wed Sep 23  2:46 PM</span>')
@@ -509,14 +509,14 @@ def menu_item(ic, text, hover=False):
 def popover(left, top):
     """Popover window: exactly 340x420, liquid-glass corner radius 18 (DEVELOPMENT.md §10.1/§10.2)."""
     head = (f'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 0;">'
-            f'<div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:13px;font-weight:700;">How Is It</span>'
+            f'<div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:13px;font-weight:700;">Headroom</span>'
             f'<span class="num" style="font-size:11px;color:var(--label2);">Updated 12s ago</span></div>'
             f'<button aria-label="Refresh" class="ctl" style="width:28px;height:28px;border-radius:99px;display:flex;align-items:center;justify-content:center;">{icon("refresh", 14)}</button></div>')
     sep = '<div style="height:1px;background:var(--sep);margin:0 16px;flex-shrink:0;"></div>'
     foot = (f'<div style="margin-top:auto;padding:6px;display:flex;flex-direction:column;gap:1px;">'
             f'{menu_item("window", "Open Dashboard", True)}{menu_item("pip", "Float Widget")}'
             f'{menu_item("gear", "Settings…")}<div style="height:1px;background:var(--sep);margin:2px 10px;"></div>'
-            f'{menu_item("power", "Quit How Is It")}</div>')
+            f'{menu_item("power", "Quit Headroom")}</div>')
     return (f'<div class="glass pop" style="position:absolute;left:{left}px;top:{top}px;width:340px;height:420px;border-radius:18px;display:flex;flex-direction:column;">'
             f'{head}{pop_service("claude", 62, 41, CLAUDE["s_reset"], CLAUDE["w_reset"])}{sep}'
             f'{pop_service("codex", 48, 78, CODEX["s_reset"], CODEX["w_reset"])}{sep}{foot}</div>')
@@ -654,7 +654,7 @@ def settings_pane(pane):
         return codex + claude
     if pane == "Display":
         general = group([label_row("Launch at login") + switch(True, "Launch at login"),
-                         label_row("Show Dock icon", "Off keeps How Is It in the menu bar only") + switch(False, "Show Dock icon")], "General")
+                         label_row("Show Dock icon", "Off keeps Headroom in the menu bar only") + switch(False, "Show Dock icon")], "General")
         widget = group([label_row("Show floating widget") + switch(True, "Show floating widget"),
                         label_row("Style") + popup_btn("Pill"),
                         label_row("Opacity") + '<div style="width:150px;"><input class="range" type="range" min="40" max="100" value="75" aria-label="Widget opacity"></div>'
@@ -681,7 +681,7 @@ def settings_pane(pane):
                ("Claude local logs", "Last activity 40s ago", "ok", "Connected")]
         rows = [label_row(n, s) + status_chip(k, t) for n, s, k, t in src]
         return (group(rows, "Sources") +
-                group([label_row("Logs", "~/Library/Logs/dev.howisit.app · last 7 days") + capsule_btn("Reveal Logs"),
+                group([label_row("Logs", "~/Library/Logs/dev.headroom.app · last 7 days") + capsule_btn("Reveal Logs"),
                        label_row("Version") + value_text("1.0.0 · local build")], "About"))
     raise ValueError(pane)
 
@@ -702,7 +702,7 @@ def settings_scene(mode, pane, read_only=False):
     if read_only:
         banner = (f'<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;font-size:12px;'
                   f'color:var(--warn-text);background:color-mix(in srgb,var(--warn) 13%,transparent);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);">'
-                  f'{icon("warn", 16, sw=2.1)}<span style="flex:1;font-weight:600;">Settings were created by a newer version of How Is It. Changes can’t be saved.</span>'
+                  f'{icon("warn", 16, sw=2.1)}<span style="flex:1;font-weight:600;">Settings were created by a newer version of Headroom. Changes can’t be saved.</span>'
                   f'<button style="height:26px;padding:0 12px;border-radius:99px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;">Reset Settings</button></div>')
         body = f'<div aria-disabled="true" style="display:flex;flex-direction:column;gap:16px;opacity:0.5;">{body}</div>'
     pane_html = (f'<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;overflow:hidden;">'
@@ -774,7 +774,7 @@ def state_card(kind, live=False, extra_cls=""):
     elif kind == "claude_nc":
         body = (card_header("claude", "", dim=True, sub="Not set up") +
                 empty_state("bell", "Turn on real-time updates",
-                            "How Is It gets Claude limits from Claude Code’s status line. Enable it once and your bars update after every response.",
+                            "Headroom gets Claude limits from Claude Code’s status line. Enable it once and your bars update after every response.",
                             "Enable Real-Time Updates", "What changes?"))
     elif kind == "codex_nc":
         body = (card_header("codex", "", dim=True, sub="Not found") +
@@ -1411,7 +1411,7 @@ def onboarding_window(left, step, icon_name, title, body, box, secondary, primar
                f'{box}'
                f'<div style="margin-top:auto;display:flex;justify-content:flex-end;align-items:center;gap:10px;">{sec}'
                f'<button style="height:30px;padding:0 18px;border-radius:99px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;">{primary}</button></div></div>')
-    center = '<span style="font-size:13px;font-weight:600;">Welcome to How Is It</span>'
+    center = '<span style="font-size:13px;font-weight:600;">Welcome to Headroom</span>'
     return window(content, left=left, top=150, center=center, right=right)
 
 
@@ -1424,7 +1424,7 @@ def onboarding_scene(mode):
                       f'<span style="color:var(--label2);margin-top:1px;">{icon(ic, 15)}</span><span>{t}</span></div>'
                       for ic, t in [("gear", "Adds a status line command to <span class=\"mono\">~/.claude/settings.json</span>. Any status line you already use keeps running after ours."),
                                     ("info", "While a custom status line is set, Claude Code hides most footer keyboard hints."),
-                                    ("warn", "A project or organization setting can override it. If updates stop arriving, How Is It tells you."),
+                                    ("warn", "A project or organization setting can override it. If updates stop arriving, Headroom tells you."),
                                     ("refresh", "You can turn it off at any time in Settings → Accounts; your previous status line is restored.")])
     step2_box = f'<div class="card" style="border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">{bullets}</div>'
     step3_box = group([label_row("75% and 90% used", "One alert per threshold per window",
@@ -1432,7 +1432,7 @@ def onboarding_scene(mode):
                        label_row("Limit reached and reset", "So you know when capacity is back",
                                  f'<span style="color:var(--crit-text);">{icon("hourglass", 18, sw=2)}</span>')],
                       None, "You can change these in Settings → Alerts.")
-    wins = (onboarding_window(60, 1, "search", "Find Codex", "How Is It shows your Codex session and weekly limits from the Codex CLI on this Mac.",
+    wins = (onboarding_window(60, 1, "search", "Find Codex", "Headroom shows your Codex session and weekly limits from the Codex CLI on this Mac.",
                               step1_box, [], "Continue") +
             onboarding_window(820, 2, "bell", "Real-time Claude updates",
                               "Claude Code can report your limits after every response through its status line.",
@@ -1520,7 +1520,7 @@ def main():
     canvas = {
         "v": 3,
         "createdOnFiles": {"v": 1, "at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
-        "title": "How Is It — macOS Usage Monitor",
+        "title": "Headroom — macOS Usage Monitor",
         "launch": {"view": "canvas", "page": "main"},
         "pages": [{"id": "main", "name": "Main window"}, {"id": "menubar", "name": "Menu bar & widget"},
                   {"id": "settings", "name": "Settings"}, {"id": "onboarding", "name": "Onboarding"},

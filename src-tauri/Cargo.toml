@@ -1,12 +1,12 @@
 [package]
-name = "how-is-it"
+name = "headroom"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Claude and Codex plan usage at a glance"
 
 [lib]
-name = "how_is_it"
+name = "headroom"
 path = "src/lib.rs"
 crate-type = ["staticlib", "cdylib", "rlib"]
 

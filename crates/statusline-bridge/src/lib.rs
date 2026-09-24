@@ -156,7 +156,7 @@ where
     match args.next() {
         None => env::var_os("HOME")
             .map(PathBuf::from)
-            .map(|home| home.join("Library/Application Support/dev.howisit.app"))
+            .map(|home| home.join("Library/Application Support/dev.headroom.app"))
             .ok_or(Error::MissingHome),
         Some(flag) if flag == "--out-dir" => {
             let path = args.next().filter(|value| !value.is_empty());

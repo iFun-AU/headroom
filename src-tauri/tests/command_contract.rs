@@ -2,7 +2,7 @@
 
 #![allow(clippy::expect_used)]
 
-use how_is_it::commands::{
+use headroom::commands::{
     BridgeStatus, CodexDetection, CommandError, PathKind, PathPurpose, Route, WindowTarget,
 };
 use serde_json::{Value, json};

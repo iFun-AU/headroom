@@ -5,7 +5,7 @@ use std::{
 
 use thiserror::Error;
 
-const APP_IDENTIFIER: &str = "dev.howisit.app";
+const APP_IDENTIFIER: &str = "dev.headroom.app";
 
 /// Settings-controlled path overrides.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -106,7 +106,7 @@ impl Paths {
             bridge_rate_limits: app_support.join("claude-rate-limits.json"),
             bridge_config: app_support.join("bridge.json"),
             bridge_install_state: app_support.join("bridge-install.json"),
-            bridge_binary: app_support.join("bin/howisit-statusline"),
+            bridge_binary: app_support.join("bin/headroom-statusline"),
             logs: home.join("Library/Logs").join(APP_IDENTIFIER),
             codex_home,
             claude_dir,

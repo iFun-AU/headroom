@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 @file export.py
-@description Exports the How Is It design canvas into a project folder:
+@description Exports the Headroom design canvas into a project folder:
              canvas/      raw .dc.html artboards + canvas.json (editable source)
              preview/     standalone HTML per artboard (opens in any browser) + index.html
              screenshots/ PNG per artboard, rendered with headless Chrome
@@ -54,7 +54,7 @@ def tokens_css(sample_src: str) -> str:
     keep = [r for r in rules if r.startswith((".glass", ".card", ".tile", ".ctl", ".tipbox", ".num", ".mono", ".neon",
                                              ".cap", "@keyframes", ".nbf", ".pulse", ".halo", ".hb", ".shim", ".spark",
                                              ".hov", "@media"))]
-    head = ("/*\n * design-tokens.css — lifted verbatim from the How Is It mockups (docs/design/canvas).\n"
+    head = ("/*\n * design-tokens.css — lifted verbatim from the Headroom mockups (docs/design/canvas).\n"
             " * Dark is the default; light applies via prefers-color-scheme. Class names match the mockups\n"
             " * so artboard markup can be read side by side with components.\n */\n")
     return (head + ":root{" + dark_body.replace(";", ";\n  ").replace("{", "{\n  ") + "}\n"
@@ -95,13 +95,13 @@ def main(project_dir: str, out: str) -> None:
             body += (f"<a href='{stem}.html'><img src='../screenshots/{stem}.png' alt='{html.escape(b['title'])}'>"
                      f"<span>{html.escape(b['title'])} · {b['w']}×{b['h']}</span></a>")
         body += "</div>"
-    gallery = ("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>How Is It — design previews</title>"
+    gallery = ("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Headroom — design previews</title>"
                "<style>body{margin:0;padding:32px;font:14px -apple-system,system-ui,sans-serif;background:#111;color:#eee}"
                "h1{margin:0 0 8px}h2{margin:32px 0 12px;font-size:16px;color:#aaa}"
                ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}"
                "a{color:inherit;text-decoration:none;display:flex;flex-direction:column;gap:6px}"
                "img{width:100%;border-radius:10px;border:1px solid #333;background:#222}</style></head><body>"
-               "<h1>How Is It — design previews</h1><p>Click a thumbnail for the full-size HTML mockup (hover works there).</p>"
+               "<h1>Headroom — design previews</h1><p>Click a thumbnail for the full-size HTML mockup (hover works there).</p>"
                f"{body}</body></html>")
     open(os.path.join(out, "preview", "index.html"), "w", encoding="utf-8").write(gallery)
     first = open(os.path.join(project_dir, canvas["order"][0]), encoding="utf-8").read()

@@ -56,7 +56,7 @@ async fn run_happy_server(
     let mut lines = BufReader::new(server_read).lines();
     let initialize = next_message(&mut lines).await;
     assert_eq!(initialize["method"], "initialize");
-    assert_eq!(initialize["params"]["clientInfo"]["name"], "how_is_it");
+    assert_eq!(initialize["params"]["clientInfo"]["name"], "headroom");
     assert_eq!(initialize["params"]["clientInfo"]["version"], "1.0.0");
     respond(
         &mut server_write,

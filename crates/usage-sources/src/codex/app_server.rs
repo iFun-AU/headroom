@@ -161,8 +161,8 @@ impl AppServerSession {
                 "initialize",
                 json!({
                     "clientInfo": {
-                        "name": "how_is_it",
-                        "title": "How Is It",
+                        "name": "headroom",
+                        "title": "Headroom",
                         "version": self.app_version,
                     }
                 }),

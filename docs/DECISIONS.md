@@ -62,7 +62,7 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 
 - Context: DEVELOPMENT.md §4.1 broadly lists `dirs` for “sources, bridge”, while the more specific §8.3 and T3.1 requirements say the synchronous status-line bridge has `serde_json` and `tempfile` only.
 - Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail”, resolved in favor of the task-specific acceptance rule.
-- Decision: the bridge binary derives `~/Library/Application Support/dev.howisit.app` from `HOME` using `std` and directly depends only on `serde_json` and `tempfile`; the later `usage-sources` path module may use `dirs` as specified.
+- Decision: the bridge binary derives `~/Library/Application Support/dev.headroom.app` from `HOME` using `std` and directly depends only on `serde_json` and `tempfile`; the later `usage-sources` path module may use `dirs` as specified.
 - Why: this meets T3.1 literally, keeps the latency-sensitive process small, and avoids a third runtime dependency for one fixed macOS path. A missing `HOME` is suppressed like every other bridge error so Claude Code is never disrupted.
 - Evidence: `cargo tree -p statusline-bridge --depth 1` shows exactly the two required direct dependencies, and every M3 integration test supplies a temporary `--out-dir` rather than resolving a real user path.
 
@@ -126,9 +126,9 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 
 - Context: DEVELOPMENT.md §14.3 requires a packaged-release soak with synthetic provider data and real `ui_visible` scheduling, while automated verification must not read user data or mutate launch-at-login state. The clean release build also failed because the workspace's global `strip = true` stripped a host proc-macro artifact before Rust could load it.
 - Rule applied: DEVELOPMENT.md §0.1 “Spec is silent on a detail” and “A check fails and the cause is unclear”.
-- Decision: enable the native soak seam only when `HOW_IS_IT_SOAK_ROOT` canonicalizes to an existing child of the system temporary directory; derive all home/data roots from it, skip autostart convergence, and own the visibility timer under the normal runtime cancellation tree. Keep release application binaries stripped, but set `profile.release.build-override.strip = false` so host build scripts and proc macros remain loadable.
+- Decision: enable the native soak seam only when `HEADROOM_SOAK_ROOT` canonicalizes to an existing child of the system temporary directory; derive all home/data roots from it, skip autostart convergence, and own the visibility timer under the normal runtime cancellation tree. Keep release application binaries stripped, but set `profile.release.build-override.strip = false` so host build scripts and proc macros remain loadable.
 - Why: a malformed or accidental soak variable fails closed before application setup, normal launches have no changed behavior, and the harness exercises the real scheduler without touching home-directory state. A build override is narrower than disabling stripping for the shipped binaries and adds no dependency or special build command.
-- Evidence: focused tests reject relative, missing and outside-temp roots and constrain the smoke-only timer interval; `cargo clippy -p how-is-it --all-targets -- -D warnings` and a clean isolated `cargo tauri build --bundles app` pass. The same isolated build reproduced `E0463: can't find crate for ctor_proc_macro` without the build override and succeeds with it.
+- Evidence: focused tests reject relative, missing and outside-temp roots and constrain the smoke-only timer interval; `cargo clippy -p headroom --all-targets -- -D warnings` and a clean isolated `cargo tauri build --bundles app` pass. The same isolated build reproduced `E0463: can't find crate for ctor_proc_macro` without the build override and succeeds with it.
 
 ## D-017 Suspend hidden WebView work and refresh on presentation (2026-09-24, phase 9)
 
@@ -156,11 +156,11 @@ This append-only log records choices and deviations made under `docs/DEVELOPMENT
 
 ## D-020 Preserve both architecture sidecars during the universal build (2026-09-24, phase 9)
 
-- Context: the exact T8.2 universal command compiles the Tauri app once per architecture. The original universal branch of `scripts/build-sidecar.sh` emitted only `howisit-statusline-universal-apple-darwin`, so Tauri's x86_64 slice build stopped because `howisit-statusline-x86_64-apple-darwin` was absent.
+- Context: the exact T8.2 universal command compiles the Tauri app once per architecture. The original universal branch of `scripts/build-sidecar.sh` emitted only `headroom-statusline-universal-apple-darwin`, so Tauri's x86_64 slice build stopped because `headroom-statusline-x86_64-apple-darwin` was absent.
 - Rule applied: DEVELOPMENT.md §0.1 “A check fails and the cause is unclear”.
 - Decision: after building the status-line bridge for both Rust targets, install both architecture-suffixed executables into `src-tauri/binaries/` and lipo those retained files into the universal-suffixed executable.
 - Why: Tauri resolves the architecture-specific name while compiling each app slice, then merges the app and sidecar into the final universal bundle. Retaining all three ignored build outputs satisfies both stages without changing the external-bin contract or adding a dependency.
-- Evidence: the repaired helper reports `arm64`, `x86_64`, and `x86_64 arm64` for its three outputs. `cargo tauri build --target universal-apple-darwin` completes both the `.app` and DMG outside the packaging sandbox. In the final bundle both `how-is-it` and `howisit-statusline` report `x86_64 arm64`; `codesign --force --deep -s -` followed by `codesign --verify --deep --strict --verbose=2` passes. As expected for the Cargo workspace, the bundle path is root `target/universal-apple-darwin/...`, not the non-workspace `src-tauri/target/...` example in §13.
+- Evidence: the repaired helper reports `arm64`, `x86_64`, and `x86_64 arm64` for its three outputs. `cargo tauri build --target universal-apple-darwin` completes both the `.app` and DMG outside the packaging sandbox. In the final bundle both `headroom` and `headroom-statusline` report `x86_64 arm64`; `codesign --force --deep -s -` followed by `codesign --verify --deep --strict --verbose=2` passes. As expected for the Cargo workspace, the bundle path is root `target/universal-apple-darwin/...`, not the non-workspace `src-tauri/target/...` example in §13.
 
 ## D-021 Require measured wall-clock cadence for the accelerated soak (2026-09-24, phase 9)
 

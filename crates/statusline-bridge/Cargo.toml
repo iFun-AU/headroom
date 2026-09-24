@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [[bin]]
-name = "howisit-statusline"
+name = "headroom-statusline"
 path = "src/main.rs"
 
 [dependencies]

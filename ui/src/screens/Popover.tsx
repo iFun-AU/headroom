@@ -91,7 +91,7 @@ export function Popover({ snapshot }: { readonly snapshot: UsageSnapshot | null 
   return (
     <main className="popover-root glass pop">
       <header className="popover-header">
-        <span><strong>How Is It</strong><small role={error === null ? undefined : "alert"}>{error ?? (snapshot === null ? "Loading usage…" : <UpdatedAgo timestamp={snapshot.generatedAt} />)}</small></span>
+        <span><strong>Headroom</strong><small role={error === null ? undefined : "alert"}>{error ?? (snapshot === null ? "Loading usage…" : <UpdatedAgo timestamp={snapshot.generatedAt} />)}</small></span>
         <button className="icon-button ctl" aria-label="Refresh usage" disabled={refreshing} onClick={refresh}>
           <Icon name="refresh" size={14} />
         </button>
@@ -106,12 +106,12 @@ export function Popover({ snapshot }: { readonly snapshot: UsageSnapshot | null 
         </>
       )}
       <div className="popover-separator" />
-      <nav className="popover-menu" aria-label="How Is It menu">
+      <nav className="popover-menu" aria-label="Headroom menu">
         <MenuButton icon="window" onClick={() => { run(() => showWindow("Main", "Overview"), "Couldn’t open the dashboard."); }}>Open Dashboard</MenuButton>
         <MenuButton icon="pip" onClick={() => { run(() => showWindow("Widget"), "Couldn’t show the widget."); }}>Float Widget</MenuButton>
         <MenuButton icon="gear" onClick={() => { run(() => showWindow("Main", "Settings"), "Couldn’t open Settings."); }}>Settings…</MenuButton>
         <div className="popover-menu__separator" />
-        <MenuButton icon="power" onClick={() => { run(quitApp, "Couldn’t quit How Is It."); }}>Quit How Is It</MenuButton>
+        <MenuButton icon="power" onClick={() => { run(quitApp, "Couldn’t quit Headroom."); }}>Quit Headroom</MenuButton>
       </nav>
     </main>
   );

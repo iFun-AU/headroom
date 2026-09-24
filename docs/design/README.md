@@ -1,4 +1,4 @@
-# How Is It: design package
+# Headroom: design package
 
 Approved UI design, exported from the design canvas
 (<https://claude.ai/artifact/SbtKJhjwPQHcs9Dbs9UFnU>, version 4, 29 artboards, 2026-09-23).

@@ -61,7 +61,7 @@ export function Settings({ snapshot, navigateOverview, fixtureState, fixtureBrid
           {SECTIONS.map((item) => <button aria-current={section === item.name ? "page" : undefined} data-section={item.name.toLowerCase()} onClick={() => { setSection(item.name); }} key={item.name}><span><Icon name={item.icon} size={14} /></span>{item.name}</button>)}
         </nav>
         <section className="settings-pane">
-          {current?.readOnly === true ? <div className="settings-readonly" role="alert"><Icon name="warning" size={16} /><strong>{current.notice ?? "Settings were created by a newer version of How Is It. Changes can’t be saved."}</strong><button className="primary-button" disabled={settingsState.saving} onClick={() => { void settingsState.reset(); }}>Reset Settings</button></div> : null}
+          {current?.readOnly === true ? <div className="settings-readonly" role="alert"><Icon name="warning" size={16} /><strong>{current.notice ?? "Settings were created by a newer version of Headroom. Changes can’t be saved."}</strong><button className="primary-button" disabled={settingsState.saving} onClick={() => { void settingsState.reset(); }}>Reset Settings</button></div> : null}
           {settingsState.error === null ? null : <div className="settings-error" role="status">{settingsState.error}</div>}
           {settingsState.loading || current === null ? <div className="settings-loading"><span className="shim" /><span className="shim" /></div> : <fieldset disabled={current.readOnly || settingsState.saving}>{pane}</fieldset>}
         </section>

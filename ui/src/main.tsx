@@ -1,6 +1,6 @@
 /**
  * @file main.tsx
- * @description React entry point for each How Is It webview window.
+ * @description React entry point for each Headroom webview window.
  */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

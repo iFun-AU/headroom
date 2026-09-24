@@ -1,4 +1,4 @@
-# Prompt: Build the How Is It UI to match the design
+# Prompt: Build the Headroom UI to match the design
 
 > **How to use:** give this file to the coding agent at the start of milestone **M7 (UI)** in `docs/DEVELOPMENT.md`. The agent needs read access to this repo.
 > **Author:** AI Assistant · **Version:** 3.0 · **Date:** 2026-09-23 · **Design:** canvas version 4 (29 artboards) · **Spec:** `DEVELOPMENT.md` v2.2
@@ -15,7 +15,7 @@
 
 ## 1. Role and goal
 
-You are building the React UI of **How Is It**, a macOS 26 menu bar app for Claude and Codex plan usage. `docs/DEVELOPMENT.md` defines what the app does, meaning data, types, IPC, routes and behavior. `docs/design/` defines how it looks. Your job is to make each screen match its design artboard while using only the types and commands in the spec.
+You are building the React UI of **Headroom**, a macOS 26 menu bar app for Claude and Codex plan usage. `docs/DEVELOPMENT.md` defines what the app does, meaning data, types, IPC, routes and behavior. `docs/design/` defines how it looks. Your job is to make each screen match its design artboard while using only the types and commands in the spec.
 
 Work in small steps. After each component, compare it with its screenshot at the same size, in dark **and** light mode, before moving on.
 
@@ -59,7 +59,7 @@ Work in small steps. After each component, compare it with its screenshot at the
 
 ## 4. Decisions the spec leaves to the design
 
-**D1 — Toolbar per route.** Dashboard routes show the segmented control **Overview · Claude · Codex** in the center, and on the right "Updated … ago", Refresh and Collapse-to-widget. The Settings and Onboarding routes show a title in the center ("Settings" / "Welcome to How Is It"). Settings adds a "‹ Overview" back button after the traffic lights; Onboarding shows "Step n of 3" + dots on the right. The toolbar root has `data-tauri-drag-region`, and its buttons and segmented control do not (§10.2).
+**D1 — Toolbar per route.** Dashboard routes show the segmented control **Overview · Claude · Codex** in the center, and on the right "Updated … ago", Refresh and Collapse-to-widget. The Settings and Onboarding routes show a title in the center ("Settings" / "Welcome to Headroom"). Settings adds a "‹ Overview" back button after the traffic lights; Onboarding shows "Step n of 3" + dots on the right. The toolbar root has `data-tauri-drag-region`, and its buttons and segmented control do not (§10.2).
 
 **D2 — Token numbers.** Show compact figures (`16.9M`, `842k`, `0`) with tabular numerals. Axis ticks are `0 / 10M / 20M` (pick a round max ≥ 1.1 × the peak). Tooltips read `{n} tokens` / `{hour or day}`.
 

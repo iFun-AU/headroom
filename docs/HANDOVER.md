@@ -1,9 +1,9 @@
-# How Is It v1 handover
+# Headroom v1 handover
 
 All automatable M0–M8 checks passed on 2026-09-24. The local universal app is:
 
 ```text
-target/universal-apple-darwin/release/bundle/macos/How Is It.app
+target/universal-apple-darwin/release/bundle/macos/Headroom.app
 ```
 
 It is ad-hoc signed and intended only for local use. The unchecked work below requires a person because it changes real files, reads real provider data, uses native macOS UI, needs eight hours of elapsed time, or requires owner credentials. Prefer a disposable macOS account for mutation tests, keep recoverable backups, and never paste credentials into this repository or its logs.
@@ -16,24 +16,24 @@ It is ad-hoc signed and intended only for local use. The unchecked work below re
 
    ```bash
    ditto \
-     "target/universal-apple-darwin/release/bundle/macos/How Is It.app" \
-     "/Applications/How Is It.app"
+     "target/universal-apple-darwin/release/bundle/macos/Headroom.app" \
+     "/Applications/Headroom.app"
    ```
 
-2. Close any development-launched copy, then open **How Is It** from Finder or Spotlight, not from a terminal. This proves GUI path discovery. Expected: onboarding opens and Codex is detected from a fixed candidate or bounded login-shell lookup; if it is not, **Browse…** can select the executable.
-3. Perform the fresh-install and bridge-mutation checks in a disposable macOS account if existing How Is It or Claude settings must be preserved.
+2. Close any development-launched copy, then open **Headroom** from Finder or Spotlight, not from a terminal. This proves GUI path discovery. Expected: onboarding opens and Codex is detected from a fixed candidate or bounded login-shell lookup; if it is not, **Browse…** can select the executable.
+3. Perform the fresh-install and bridge-mutation checks in a disposable macOS account if existing Headroom or Claude settings must be preserved.
 
 The ten checkbox lines below are copied unchanged and remain in contract order.
 
 - [ ] Fresh install → onboarding → the Codex bar appears within 5 s.
 
-  **Instructions:** launch the `/Applications` copy with no existing How Is It settings, complete the Codex step, skip or accept the optional Claude bridge, and finish notification onboarding. Time from completion to the first Codex bar.
+  **Instructions:** launch the `/Applications` copy with no existing Headroom settings, complete the Codex step, skip or accept the optional Claude bridge, and finish notification onboarding. Time from completion to the first Codex bar.
 
   **Expected:** the dashboard appears, the Codex bar has real data within five seconds, and no Claude settings are changed unless bridge consent was given.
 
 - [ ] Enable the Claude bridge → run a Claude Code prompt → the Claude bars update in < 2 s, and the bridge state becomes `Confirmed`.
 
-  **Instructions:** duplicate `~/.claude/settings.json` first if it exists. Enable **Settings → Accounts → Claude → Real-time updates**, start Claude Code, and submit one ordinary prompt while watching How Is It.
+  **Instructions:** duplicate `~/.claude/settings.json` first if it exists. Enable **Settings → Accounts → Claude → Real-time updates**, start Claude Code, and submit one ordinary prompt while watching Headroom.
 
   **Expected:** the session/weekly bars update within two seconds of Claude's response; Diagnostics reports `Confirmed`; the backup, installed bridge, and unrelated settings remain intact.
 
@@ -47,11 +47,11 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
   Keep Claude Code activity confined to that project for more than ten minutes after the user bridge was installed.
 
-  **Expected:** How Is It keeps the last good limits, changes bridge effectiveness to `LikelyOverridden`, dims the affected session value, and explains that project or managed settings may take precedence.
+  **Expected:** Headroom keeps the last good limits, changes bridge effectiveness to `LikelyOverridden`, dims the affected session value, and explains that project or managed settings may take precedence.
 
 - [ ] Quit Claude Code → the Claude bars show "Updated Xm ago" and turn Stale after 15 min.
 
-  **Instructions:** first obtain a confirmed bridge reading, quit every Claude Code process, and leave How Is It running without new Claude events.
+  **Instructions:** first obtain a confirmed bridge reading, quit every Claude Code process, and leave Headroom running without new Claude events.
 
   **Expected:** the age text advances and, strictly after 15 minutes, Claude is visually stale without losing the last good values.
 
@@ -63,16 +63,16 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
 - [ ] Kill our `codex app-server` child → the Codex status shows `Degraded`, the bars keep updating from rollout files, and the child restarts with backoff.
 
-  **Instructions:** list running copies, choose the PID of the installed How Is It app, then list only that process's children:
+  **Instructions:** list running copies, choose the PID of the installed Headroom app, then list only that process's children:
 
   ```bash
-  pgrep -x how-is-it
-  HOWISIT_PID='replace-with-verified-app-pid'
-  ps -p "$HOWISIT_PID" -o pid=,command=
-  pgrep -P "$HOWISIT_PID" -fl 'app-server'
+  pgrep -x headroom
+  HEADROOM_PID='replace-with-verified-app-pid'
+  ps -p "$HEADROOM_PID" -o pid=,command=
+  pgrep -P "$HEADROOM_PID" -fl 'app-server'
   ```
 
-  Replace the quoted placeholder with the numeric app PID before running the remaining commands. Set `HOWISIT_CHILD_PID` to the single verified `codex app-server` child PID. Confirm its PPID equals `HOWISIT_PID` with `ps -p "$HOWISIT_CHILD_PID" -o pid=,ppid=,command=`, then run `kill "$HOWISIT_CHILD_PID"`. Never target unrelated Codex processes.
+  Replace the quoted placeholder with the numeric app PID before running the remaining commands. Set `HEADROOM_CHILD_PID` to the single verified `codex app-server` child PID. Confirm its PPID equals `HEADROOM_PID` with `ps -p "$HEADROOM_CHILD_PID" -o pid=,ppid=,command=`, then run `kill "$HEADROOM_CHILD_PID"`. Never target unrelated Codex processes.
 
   **Expected:** status becomes `Degraded`, rollout-file activity still updates the bars, and exactly one replacement child appears after bounded backoff.
 
@@ -84,7 +84,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
 - [ ] Add a key to `~/.claude/settings.json` after install → uninstall the bridge → `statusLine` is restored and the added key is still there.
 
-  **Instructions:** after bridge installation, add a benign top-level key such as `"howIsItHandoverProbe": true` with a JSON-aware editor. Disable real-time updates from How Is It.
+  **Instructions:** after bridge installation, add a benign top-level key such as `"headroomHandoverProbe": true` with a JSON-aware editor. Disable real-time updates from Headroom.
 
   **Expected:** the exact pre-install `statusLine` value is restored (or removed if originally absent), the probe and every unrelated edit remain, and uninstall does not replace the whole file from backup.
 
@@ -93,11 +93,11 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
   **Instructions:** avoid renaming the primary installation. Create a temporary symlink:
 
   ```bash
-  HOWISIT_CODEX_DIR="$(mktemp -d)"
-  ln -s "$(command -v codex)" "$HOWISIT_CODEX_DIR/codex"
+  HEADROOM_CODEX_DIR="$(mktemp -d)"
+  ln -s "$(command -v codex)" "$HEADROOM_CODEX_DIR/codex"
   ```
 
-  Select `$HOWISIT_CODEX_DIR/codex` with **Browse…**, confirm Codex is detected, then run `mv "$HOWISIT_CODEX_DIR/codex" "$HOWISIT_CODEX_DIR/codex.off"` and relaunch How Is It. Restore the symlink name after the check and select the real executable again.
+  Select `$HEADROOM_CODEX_DIR/codex` with **Browse…**, confirm Codex is detected, then run `mv "$HEADROOM_CODEX_DIR/codex" "$HEADROOM_CODEX_DIR/codex.off"` and relaunch Headroom. Restore the symlink name after the check and select the real executable again.
 
   **Expected:** Codex becomes `NotConfigured` with an actionable path hint; the app, Claude data, and settings remain usable.
 
@@ -105,7 +105,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
   **Instructions:** select a valid Codex executable with the native picker, use **Diagnostics → Reveal Logs**, then quit from the menu-bar action.
 
-  **Expected:** the selected path persists, Finder opens `~/Library/Logs/dev.howisit.app`, and both the app and its owned child are gone after Quit.
+  **Expected:** the selected path persists, Finder opens `~/Library/Logs/dev.headroom.app`, and both the app and its owned child are gone after Quit.
 
 ## 2. Eight-hour soak and Safari WebView memory
 
@@ -116,13 +116,13 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
   **Instructions:** use `scripts/soak.sh` as the audited setup/process-cleanup reference, but do not count its completed 10×/60-minute mode as this result. For this run, generate exactly one synthetic Codex token line and one synthetic Claude assistant line per second, and atomically replace the bridge file every five seconds. Keep all fixtures under one `mktemp -d` root and point app settings overrides there; do not use real provider trees. Toggle the real menu-bar popover every minute (AppleScript after granting Accessibility access, or manually for at least the first ten minutes). Record this every five minutes:
 
   ```bash
-  pgrep -x how-is-it
-  HOWISIT_PID='replace-with-verified-app-pid'
-  footprint -p "$HOWISIT_PID" | grep 'phys_footprint:'
-  pgrep -P "$HOWISIT_PID" -f 'app-server' | wc -l
+  pgrep -x headroom
+  HEADROOM_PID='replace-with-verified-app-pid'
+  footprint -p "$HEADROOM_PID" | grep 'phys_footprint:'
+  pgrep -P "$HEADROOM_PID" -f 'app-server' | wc -l
   ```
 
-  Replace the quoted placeholder with the verified installed-app PID before running the remaining commands. Retain a CSV with timestamp, elapsed seconds, physical footprint, child count, and child PID. Stop synthetic events after hour eight, leave the app idle for ten minutes, record average CPU in Activity Monitor, run `leaks "$HOWISIT_PID"`, quit normally, and check the logged child PID with `kill -0`.
+  Replace the quoted placeholder with the verified installed-app PID before running the remaining commands. Retain a CSV with timestamp, elapsed seconds, physical footprint, child count, and child PID. Stop synthetic events after hour eight, leave the app idle for ten minutes, record average CPU in Activity Monitor, run `leaks "$HEADROOM_PID"`, quit normally, and check the logged child PID with `kill -0`.
 
   **Expected:** hour-one to hour-eight main-process footprint growth is under 10%; ten-minute idle CPU averages under 0.5%; every child count is zero or one and matches the logged spawn PID; the app and child exit cleanly. On target macOS 26, `leaks` must say `0 leaks for 0 total leaked bytes`. Do not treat D-018's narrowly classified macOS 27 AppIntents cycles as raw-zero proof for macOS 26.
 
@@ -130,7 +130,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
 - [ ] Verify the dashboard WebView heap returns to baseline after 50 open/close cycles.
 
-  **Instructions:** enable Safari's **Develop** menu, run a debug build with either explicit consent for live provider data or the same isolated temporary roots, and open **Develop → How Is It → dashboard WebView → Timelines/Memory**. Record a post-GC baseline, open and close the dashboard 50 times, force/allow GC, then record the settled heap. Repeat once to distinguish one-time framework allocation from monotonic retention.
+  **Instructions:** enable Safari's **Develop** menu, run a debug build with either explicit consent for live provider data or the same isolated temporary roots, and open **Develop → Headroom → dashboard WebView → Timelines/Memory**. Record a post-GC baseline, open and close the dashboard 50 times, force/allow GC, then record the settled heap. Repeat once to distinguish one-time framework allocation from monotonic retention.
 
   **Expected:** detached React trees/listeners do not accumulate and the settled heap returns close to the post-warm-up baseline rather than growing with each cycle.
 
@@ -151,7 +151,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 - [ ] **Real log secret scan:** after the manual scenarios, run:
 
   ```bash
-  grep -Eri 'bearer|accessToken|sk-' "$HOME/Library/Logs/dev.howisit.app"
+  grep -Eri 'bearer|accessToken|sk-' "$HOME/Library/Logs/dev.headroom.app"
   ```
 
   Expected: no output and exit status 1. Inspect any match as sensitive; do not paste it into an issue or commit.
@@ -195,11 +195,11 @@ Do this only if the owner wants a distributable build and supplies/manages their
 
   ```bash
   codesign --verify --deep --strict --verbose=2 \
-    "target/universal-apple-darwin/release/bundle/macos/How Is It.app"
+    "target/universal-apple-darwin/release/bundle/macos/Headroom.app"
   spctl --assess --type execute --verbose=2 \
-    "target/universal-apple-darwin/release/bundle/macos/How Is It.app"
+    "target/universal-apple-darwin/release/bundle/macos/Headroom.app"
   xcrun stapler validate \
-    "target/universal-apple-darwin/release/bundle/dmg/How Is It_1.0.0_universal.dmg"
+    "target/universal-apple-darwin/release/bundle/dmg/Headroom_1.0.0_universal.dmg"
   ```
 
   **Expected:** Developer ID signature validation passes, the notarization submission is `Accepted`, the ticket staples/validates, and Gatekeeper identifies the app as notarized Developer ID software on another Mac.

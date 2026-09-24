@@ -1,4 +1,4 @@
-# How Is It — Development Guide
+# Headroom — Development Guide
 
 > **Audience:** an AI coding agent (or junior engineer) that will implement this app step by step.
 > **Author:** AI Assistant · **Created:** 2026-09-23 · **Modified:** 2026-09-23 (v2.2, final; see §17)
@@ -58,7 +58,7 @@ Before halting, record the blocker in `docs/PROGRESS.md`.
 
 ## 1. Product summary
 
-**How Is It** shows, at a glance, how much of the user's **Claude** (Claude Code / claude.ai plan) and **Codex** (ChatGPT plan) rate limits have been used:
+**Headroom** shows, at a glance, how much of the user's **Claude** (Claude Code / claude.ai plan) and **Codex** (ChatGPT plan) rate limits have been used:
 
 | Metric | Meaning | Shown as |
 |---|---|---|
@@ -94,7 +94,7 @@ These were verified on 2026-09-23 against **Claude Code 2.1.273**, **codex-cli 0
 
 - **Transport:** spawn `codex app-server` as a child process. Protocol is **newline-delimited JSON-RPC over stdio**, one JSON object per line. The `"jsonrpc":"2.0"` field is **not required** (verified working without it).
 - **Handshake (verified):**
-  1. Send request: `{"id":1,"method":"initialize","params":{"clientInfo":{"name":"how_is_it","title":"How Is It","version":"<app version>"}}}`
+  1. Send request: `{"id":1,"method":"initialize","params":{"clientInfo":{"name":"headroom","title":"Headroom","version":"<app version>"}}}`
   2. Wait for the response with `id:1`. Its `result` has keys `userAgent`, `codexHome`, `platformFamily`, and `platformOs`.
   3. Send notification: `{"method":"initialized"}`
 - **Read rate limits (verified):** request `account/rateLimits/read` with params `{"excludeResetCreditDetails":true}`. The response is in Appendix A.2. Important fields:
@@ -157,7 +157,7 @@ Claude Code runs a user-configured **status line command** and sends it JSON on 
 
 - ⚠ **Undocumented.** It is used internally by Claude Code: the strings `api/oauth/usage`, `oauth-2025-04-20`, `five_hour`, `seven_day`, `seven_day_opus`, and `seven_day_sonnet` appear in the 2.1.273 binary. It may change without notice. **Off by default.** The user enables it in Settings after reading a warning.
 - **Request:** `GET https://api.anthropic.com/api/oauth/usage`
-  Headers: `Authorization: Bearer <accessToken>`, `anthropic-beta: oauth-2025-04-20`, `Accept: application/json`, `User-Agent: how-is-it/<version>`
+  Headers: `Authorization: Bearer <accessToken>`, `anthropic-beta: oauth-2025-04-20`, `Accept: application/json`, `User-Agent: headroom/<version>`
 - **Token source:** macOS Keychain generic password, service **`Claude Code-credentials`** (item presence verified). The value is JSON containing `claudeAiOauth` with `accessToken`, `expiresAt` (epoch **milliseconds**), and `subscriptionType` (these key names appear in the binary).
 - ⚠ **VERIFY the response shape** in T9.1 with the probe (§13, M9) before writing the parser. Expected (community-documented) shape, Appendix A.5:
   `{ "five_hour": {"utilization": float 0-100, "resets_at": "ISO-8601" | null} | null, "seven_day": {...} | null, ... }`
@@ -166,7 +166,7 @@ Claude Code runs a user-configured **status line command** and sends it JSON on 
   - **Read-only.** Never write, refresh, or rotate the token. Refreshing could invalidate Claude Code's own session.
   - **Only** a local `expiresAt < now` or an HTTP **401** maps to `AuthExpired` (*"Open Claude Code to refresh sign-in"*). Re-check the Keychain on the next scheduled tick.
   - HTTP **403 / 404** map to `Unsupported { reason }`. A 403 can mean the account lacks permission or the endpoint is unavailable, and it is not an expiry. Stop polling until the app restarts or the setting is toggled.
-  - The first Keychain read shows a macOS prompt: *"How Is It wants to access 'Claude Code-credentials'"*. The onboarding copy must explain this and tell the user to choose "Always Allow".
+  - The first Keychain read shows a macOS prompt: *"Headroom wants to access 'Claude Code-credentials'"*. The onboarding copy must explain this and tell the user to choose "Always Allow".
 
 ### 2.5 Claude: local conversation logs (history charts)
 
@@ -191,7 +191,7 @@ Claude Code runs a user-configured **status line command** and sends it JSON on 
 ### 3.1 Process and component diagram
 
 ```
-┌──────────────────────────── How Is It.app (one Rust process) ─────────────────────────────┐
+┌───────────────────────────── Headroom.app (one Rust process) ──────────────────────────────┐
 │                                                                                            │
 │  usage-sources (tokio tasks, each owns a CancellationToken child)                          │
 │  ┌──────────────────────┐ ┌─────────────────────┐ ┌──────────────────────┐ ┌─────────────┐ │
@@ -218,8 +218,8 @@ Claude Code runs a user-configured **status line command** and sends it JSON on 
 │  (React + TS, one Vite app, route chosen by window label)                                  │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
 
- Separate tiny binary:  howisit-statusline  (invoked by Claude Code; synchronous, deps serde_json + tempfile, no tokio)
-   stdin JSON ─► writes ~/Library/Application Support/dev.howisit.app/claude-rate-limits.json (atomic)
+ Separate tiny binary:  headroom-statusline  (invoked by Claude Code; synchronous, deps serde_json + tempfile, no tokio)
+   stdin JSON ─► writes ~/Library/Application Support/dev.headroom.app/claude-rate-limits.json (atomic)
              └─► optionally pipes stdin to the user's previous statusLine command and prints its stdout
 ```
 
@@ -298,7 +298,7 @@ Use `cargo add` / `npm install` to pick exact patch versions. The versions below
 ## 5. Repository layout
 
 ```
-how-is-it/
+headroom/
 ├── Cargo.toml                    # [workspace] members + [workspace.lints] (§6.1)
 ├── rust-toolchain.toml           # channel = "1.95"
 ├── docs/
@@ -320,7 +320,7 @@ how-is-it/
 │   │   ├── src/claude/{bridge_source.rs, bridge_install.rs, oauth.rs, keychain.rs, history.rs}
 │   │   ├── src/store.rs          # UsageStore actor
 │   │   └── examples/probe.rs     # CLI: runs all sources and prints snapshots (no UI)
-│   └── statusline-bridge/        # bin "howisit-statusline", synchronous (serde_json + tempfile)
+│   └── statusline-bridge/        # bin "headroom-statusline", synchronous (serde_json + tempfile)
 │       └── src/main.rs
 │       └── tests/concurrency.rs  # T3.3
 ├── scripts/
@@ -721,13 +721,13 @@ Loop with `tokio::select! { _ = cancel.cancelled() => break, … }`. Never block
 
 ### 8.3 Claude status line bridge (`crates/statusline-bridge` + `claude/bridge_install.rs` + `claude/bridge_source.rs`)
 
-**Bridge binary (`howisit-statusline`): synchronous (no async runtime, no tokio). Dependencies are `serde_json` and `tempfile` only. It must never fail Claude Code.**
+**Bridge binary (`headroom-statusline`): synchronous (no async runtime, no tokio). Dependencies are `serde_json` and `tempfile` only. It must never fail Claude Code.**
 
 *Performance budgets:*
 - **Unchained fast path** (no `chainedCommand`): p95 **< 20 ms** wall time, measured in T3.3.
 - **Chained path:** the bridge's own work stays inside the same 20 ms budget. The chained command gets a **hard 2 s timeout**, after which it is killed. Total worst case is about 2.02 s. Claude Code may cancel the bridge earlier (§2.3), and that is fine because the rate-limit file is written **before** the chained command runs.
 
-*Arguments:* `--out-dir <path>` (optional; **tests only**) overrides the output/config directory. The installer never passes it, so in production the directory is always `~/Library/Application Support/dev.howisit.app/`.
+*Arguments:* `--out-dir <path>` (optional; **tests only**) overrides the output/config directory. The installer never passes it, so in production the directory is always `~/Library/Application Support/dev.headroom.app/`.
 
 *Steps:*
 1. Read all of stdin (cap 4 MB).
@@ -743,9 +743,9 @@ Loop with `tokio::select! { _ = cancel.cancelled() => break, … }`. Never block
 4. **Always `exit(0)`**, even on errors. On error, print nothing.
 
 **Installer (`bridge_install.rs`).** It only runs when the user clicks "Enable real-time Claude updates" in onboarding or Settings, which is an explicit consent step:
-1. Copy the bridge from the app bundle (`Contents/MacOS/howisit-statusline`, shipped via Tauri `bundle.externalBin`) to `~/Library/Application Support/dev.howisit.app/bin/howisit-statusline` and `chmod 755`. Re-copy on each app launch if the version differs, so the path in `settings.json` stays stable even if the app moves.
+1. Copy the bridge from the app bundle (`Contents/MacOS/headroom-statusline`, shipped via Tauri `bundle.externalBin`) to `~/Library/Application Support/dev.headroom.app/bin/headroom-statusline` and `chmod 755`. Re-copy on each app launch if the version differs, so the path in `settings.json` stays stable even if the app moves.
 2. Read `<claude_dir>/settings.json` (missing → `{}`) into `serde_json::Value` with `preserve_order`. **If it fails to parse, or the top level isn't an object → abort and show an error. Never overwrite a file you can't parse.**
-3. Write a backup to `settings.json.howisit-backup-<unix>`. It is kept for **manual** recovery only (see step 7).
+3. Write a backup to `settings.json.headroom-backup-<unix>`. It is kept for **manual** recovery only (see step 7).
 4. Save the **entire** previous `statusLine` value (any JSON, or "absent") into app state `<app_support>/bridge-install.json` → `{"previousStatusLine": <value> | null, "installedAt": <unix>}`. If the previous value is an object with a `command` that is not ours → also write `bridge.json.chainedCommand = <that command>`.
 5. **Build the new value by cloning the previous object** (or `{}` if it was absent or not an object) and overwriting **only** `type = "command"` and `command = "'<bridge path>'"`. Every other key is preserved as-is: `padding`, `refreshInterval`, `hideVimModeIndicator`, and any future keys. Leave all other top-level keys of `settings.json` untouched.
 6. Write atomically (`NamedTempFile::new_in(<claude_dir>)` + `persist`), preserving the original file's permission bits.
@@ -774,7 +774,7 @@ Loop with `tokio::select! { _ = cancel.cancelled() => break, … }`. Never block
 Same tail and watch machinery as §8.2, rooted at `<claude_dir>/projects`, recursive. Prefilter: the line contains `"usage"` and `"assistant"`. Emit `TokenEvent { source: ClaudeLocalLogs, dedupe_key: Some(format!("{msg_id}:{request_id}")) }` and `Activity`. The last activity time also feeds the bridge effectiveness check (§8.3). The store deduplicates (§6.3 pruning).
 
 ### 8.6 Paths (`paths.rs`)
-One module computes every path from `Settings` overrides + `dirs::home_dir()`. **No other module may build paths itself.** App support directory: `dirs::data_dir()/dev.howisit.app`.
+One module computes every path from `Settings` overrides + `dirs::home_dir()`. **No other module may build paths itself.** App support directory: `dirs::data_dir()/dev.headroom.app`.
 
 ---
 
@@ -822,12 +822,12 @@ Fields (v1):
 ### 10.1 `tauri.conf.json` essentials
 ```jsonc
 {
-  "productName": "How Is It",
-  "identifier": "dev.howisit.app",
+  "productName": "Headroom",
+  "identifier": "dev.headroom.app",
   "app": {
     "macOSPrivateApi": true,
     "windows": [
-      { "label": "main", "title": "How Is It", "width": 720, "height": 520, "minWidth": 560, "minHeight": 420,
+      { "label": "main", "title": "Headroom", "width": 720, "height": 520, "minWidth": 560, "minHeight": 420,
         "transparent": true, "titleBarStyle": "Overlay", "hiddenTitle": true, "visible": false },
       { "label": "popover", "width": 340, "height": 420, "decorations": false, "transparent": true,
         "alwaysOnTop": true, "skipTaskbar": true, "resizable": false, "visible": false, "focus": true },
@@ -837,13 +837,13 @@ Fields (v1):
     ],
     "security": { "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" }
   },
-  "bundle": { "externalBin": ["binaries/howisit-statusline"], "macOS": { "minimumSystemVersion": "26.0" } }
+  "bundle": { "externalBin": ["binaries/headroom-statusline"], "macOS": { "minimumSystemVersion": "26.0" } }
 }
 ```
 - **Settings and Onboarding are routes inside the `main` window** (`#/settings`, `#/onboarding`), not extra windows. There are exactly three windows: `main`, `popover`, and `widget`.
-- **`externalBin` naming:** Tauri looks for `binaries/howisit-statusline-<target-triple>` matching the **bundle target**:
-  - Dev or native build: `howisit-statusline-aarch64-apple-darwin` (or `-x86_64-apple-darwin` on Intel).
-  - Universal build: `howisit-statusline-universal-apple-darwin`, which **you must create yourself** with `lipo` (Tauri lipos the main app but not sidecars). See T8.2.
+- **`externalBin` naming:** Tauri looks for `binaries/headroom-statusline-<target-triple>` matching the **bundle target**:
+  - Dev or native build: `headroom-statusline-aarch64-apple-darwin` (or `-x86_64-apple-darwin` on Intel).
+  - Universal build: `headroom-statusline-universal-apple-darwin`, which **you must create yourself** with `lipo` (Tauri lipos the main app but not sidecars). See T8.2.
   - The script `scripts/build-sidecar.sh <triple>` builds `statusline-bridge` and copies or lipos it into `src-tauri/binaries/`. `beforeBuildCommand` / `beforeDevCommand` call it.
 - **Capabilities** (`capabilities/default.json`): `core:default`, **`core:window:allow-start-dragging`** (needed by `data-tauri-drag-region`), `liquid-glass:default`, `notification:default`, `autostart:default`, `positioner:default`, and our own commands. The dialog and opener plugins are invoked **from Rust commands only**, so their JS permissions are not granted.
 
@@ -957,7 +957,7 @@ Props: `{ percent: number; accent: "claude" | "codex"; label: string; resetsAt: 
 ## 12. Notifications, launch at login, logging
 - Notifications: ask for permission in onboarding step 3, not at launch. Title examples: "Claude weekly limit at 90%", with body "Resets Mon 9:00 AM".
 - Autostart: `tauri-plugin-autostart` (LaunchAgent), toggled from Settings.
-- Logs: `~/Library/Logs/dev.howisit.app/`, rotated daily and keeping 7 files (§4.1). External text goes through `log_trunc` (§6.3). The "Reveal Logs" button in Settings → Diagnostics calls `reveal_logs`.
+- Logs: `~/Library/Logs/dev.headroom.app/`, rotated daily and keeping 7 files (§4.1). External text goes through `log_trunc` (§6.3). The "Reveal Logs" button in Settings → Diagnostics calls `reveal_logs`.
 
 ---
 
@@ -997,7 +997,7 @@ Each task: **Goal · Files · Steps · Acceptance · Verify**. The standard veri
   ```
   Expected: it prints `5h 24% · 7d 41%`, `$OUT/claude-rate-limits.json` exists and is valid JSON, and the exit code is 0. With invalid stdin (`echo garbage | … --out-dir "$OUT"`), the exit code is 0 and nothing is printed.
 - **T3.2** Chaining (tempdir): put `{"chainedCommand":"cat >/dev/null; echo CHAINED"}` in `$OUT/bridge.json` and verify the output is `CHAINED`. Put `"sleep 5"` there and verify it returns in 2.0–2.3 s and the rate-limit file was still written.
-- **T3.3** Concurrency and budget (Rust integration test in `crates/statusline-bridge/tests/`, using `env!("CARGO_BIN_EXE_howisit-statusline")`):
+- **T3.3** Concurrency and budget (Rust integration test in `crates/statusline-bridge/tests/`, using `env!("CARGO_BIN_EXE_headroom-statusline")`):
   - Launch **50 overlapping invocations** (threads, each spawning the binary with the fixture on stdin and the same tempdir `--out-dir`). Kill every 5th one at a random 0–10 ms delay. Afterwards: the target file parses as valid JSON, and **no `.tmp*` files remain** except from killed processes (these must be removed by the startup cleanup function, which is also tested here).
   - Budget: 100 sequential unchained runs of the **release** binary → p95 < 20 ms (`cargo test --release -p statusline-bridge`).
 
@@ -1049,16 +1049,16 @@ Each task: **Goal · Files · Steps · Acceptance · Verify**. The standard veri
 - **T8.2 Universal local build (ad-hoc signed, NOT distributable):**
   ```bash
   rustup target add aarch64-apple-darwin x86_64-apple-darwin
-  scripts/build-sidecar.sh universal-apple-darwin   # builds both arches, lipo -create → binaries/howisit-statusline-universal-apple-darwin
+  scripts/build-sidecar.sh universal-apple-darwin   # builds both arches, lipo -create → binaries/headroom-statusline-universal-apple-darwin
   cargo tauri build --target universal-apple-darwin
   ```
   Then run each check separately:
   ```bash
-  lipo -archs "src-tauri/target/universal-apple-darwin/release/bundle/macos/How Is It.app/Contents/MacOS/how-is-it"
+  lipo -archs "src-tauri/target/universal-apple-darwin/release/bundle/macos/Headroom.app/Contents/MacOS/headroom"
   ```
   Expected: `x86_64 arm64`.
   ```bash
-  lipo -archs "src-tauri/target/universal-apple-darwin/release/bundle/macos/How Is It.app/Contents/MacOS/howisit-statusline"
+  lipo -archs "src-tauri/target/universal-apple-darwin/release/bundle/macos/Headroom.app/Contents/MacOS/headroom-statusline"
   ```
   Expected: `x86_64 arm64`.
   Then ad-hoc sign (`codesign --force --deep -s - "<app>"`), copy to `/Applications`, and smoke test that PATH discovery works without a terminal. *Label the artifact "local build only".*
@@ -1091,14 +1091,14 @@ cargo llvm-cov -p usage-core --fail-under-lines 90
 ### 14.3 Leak and soak (manual, M8)
 1. Point the settings overrides at a temp `codex_home` and `claude_dir`. Run a script that appends one synthetic `token_count` line and one Claude assistant line **every second**, and rewrites the bridge file every 5 s.
 2. Run the release build for **8 hours** with the popover toggled every minute (AppleScript or manually for the first 10 min).
-3. Every 5 min, record `footprint -p <app_pid> | grep "phys_footprint:"` for the main process into a CSV. Get `<app_pid>` from `pgrep -x how-is-it` (the exact process name of *our* binary).
+3. Every 5 min, record `footprint -p <app_pid> | grep "phys_footprint:"` for the main process into a CSV. Get `<app_pid>` from `pgrep -x headroom` (the exact process name of *our* binary).
 4. **Pass criteria:**
    - `leaks <app_pid>` → `0 leaks for 0 total leaked bytes` (main Rust process)
    - Main-process footprint growth from hour 1 to hour 8 is **< 10 %**
    - Idle CPU is < 0.5 % averaged over 10 min (Activity Monitor) with no new events
    - **Our** child `codex app-server` count is always ≤ 1, counted as **children of our PID only**: `pgrep -P <app_pid> -f "app-server" | wc -l`. Cross-check against the PID logged at spawn (§8.1 step 8). Unrelated Codex processes the user runs are ignored.
    - After Quit: `pgrep -P <app_pid>` returns nothing, and the child PID from the log no longer exists (`kill -0 <child_pid>` fails).
-5. WebView: in a debug build, use Safari → Develop → How Is It → Timelines/Memory. Heap size must return to baseline after 50 open/close cycles of the dashboard.
+5. WebView: in a debug build, use Safari → Develop → Headroom → Timelines/Memory. Heap size must return to baseline after 50 open/close cycles of the dashboard.
 
 **Agent run (automated, required for T8.1).** Add `scripts/soak.sh`:
 - Temp `codex_home` and `claude_dir` overrides.
@@ -1133,7 +1133,7 @@ The implementing agent automates what it can (e.g. with fixtures, temp dirs and 
 - [ ] The v1 build is compiled **without** `claude-oauth`, and `cargo tree -p usage-sources -e features` shows no `reqwest` or `security-framework`.
 - [ ] The universal app and sidecar pass the `lipo -archs` checks (T8.2).
 - [ ] The soak test passes (§14.3), and the results are in `DECISIONS.md`.
-- [ ] No secrets appear in logs (`grep -ri "bearer\|accessToken\|sk-" ~/Library/Logs/dev.howisit.app` returns nothing).
+- [ ] No secrets appear in logs (`grep -ri "bearer\|accessToken\|sk-" ~/Library/Logs/dev.headroom.app` returns nothing).
 - [ ] The README covers install, permissions, the bridge (including the override caveat), and the local-build note.
 
 ---

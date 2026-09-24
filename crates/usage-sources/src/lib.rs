@@ -1,4 +1,4 @@
-//! Asynchronous data-source infrastructure for How Is It.
+//! Asynchronous data-source infrastructure for Headroom.
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 

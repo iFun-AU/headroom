@@ -80,7 +80,7 @@ fn overlapping_and_killed_writers_leave_valid_atomic_state() {
 
 fn invoke_bridge(index: usize, seed: u64, out_dir: &Path, barrier: &Barrier) {
     barrier.wait();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_howisit-statusline"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_headroom-statusline"))
         .args([
             "--out-dir",
             out_dir.to_str().expect("temp path should be UTF-8"),

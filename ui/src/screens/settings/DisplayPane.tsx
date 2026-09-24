@@ -16,7 +16,7 @@ export function DisplayPane({ settings, disabled, save }: { readonly settings: S
     <>
       <SettingsGroup heading="General">
         <SettingsRow label="Launch at login"><Switch checked={settings.launchAtLogin} label="Launch at login" disabled={disabled} onChange={(launchAtLogin) => { save({ ...settings, launchAtLogin }); }} /></SettingsRow>
-        <SettingsRow label="Show Dock icon" description="Off keeps How Is It in the menu bar only"><Switch checked={settings.showDockIcon} label="Show Dock icon" disabled={disabled} onChange={(showDockIcon) => { save({ ...settings, showDockIcon }); }} /></SettingsRow>
+        <SettingsRow label="Show Dock icon" description="Off keeps Headroom in the menu bar only"><Switch checked={settings.showDockIcon} label="Show Dock icon" disabled={disabled} onChange={(showDockIcon) => { save({ ...settings, showDockIcon }); }} /></SettingsRow>
         <SettingsRow label="Menu bar" description="Weekly limits as text or stacked bars (Claude on top)"><select className="settings-select ctl" aria-label="Menu bar style" value={settings.trayStyle} disabled={disabled} onChange={(event) => { save({ ...settings, trayStyle: event.currentTarget.value === "Bars" ? "Bars" : "Numbers" }); }}><option value="Numbers">Numbers</option><option value="Bars">Bars</option></select></SettingsRow>
         <SettingsRow label="Keep dashboard on top" description="Also available from the pin button in the dashboard toolbar"><Switch checked={settings.mainAlwaysOnTop} label="Keep dashboard on top" disabled={disabled} onChange={(mainAlwaysOnTop) => { save({ ...settings, mainAlwaysOnTop }); }} /></SettingsRow>
       </SettingsGroup>

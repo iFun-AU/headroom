@@ -22,14 +22,14 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let directory = tempfile::tempdir().expect("tempdir should be created");
-        let bundled = directory.path().join("bundle/howisit-statusline");
+        let bundled = directory.path().join("bundle/headroom-statusline");
         fs::create_dir_all(bundled.parent().expect("bundle path should have a parent"))
             .expect("bundle directory should be created");
         fs::write(&bundled, b"bridge-v1").expect("bundled bridge should be written");
         let app_support = directory.path().join("app-support");
         let config = BridgeInstallConfig::new(
             bundled,
-            app_support.join("bin/howisit-statusline"),
+            app_support.join("bin/headroom-statusline"),
             directory.path().join("claude/settings.json"),
             app_support.join("bridge-install.json"),
             app_support.join("bridge.json"),

@@ -437,5 +437,5 @@ fn backup_path(settings: &Path, installed_at: UnixSeconds) -> Result<PathBuf, Br
         .ok_or_else(|| BridgeInstallError::InvalidPath {
             path: settings.to_path_buf(),
         })?;
-    Ok(settings.with_file_name(format!("{file_name}.howisit-backup-{}", installed_at.0)))
+    Ok(settings.with_file_name(format!("{file_name}.headroom-backup-{}", installed_at.0)))
 }

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "How Is It",
+  "productName": "Headroom",
   "version": "1.0.0",
-  "identifier": "dev.howisit.app",
+  "identifier": "dev.headroom.app",
   "build": {
     "beforeDevCommand": "../scripts/build-sidecar.sh && npm --prefix ../ui run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "How Is It",
+        "title": "Headroom",
         "width": 720,
         "height": 520,
         "minWidth": 560,
@@ -63,7 +63,7 @@
       "icons/icon.icns",
       "icons/icon.png"
     ],
-    "externalBin": ["binaries/howisit-statusline"],
+    "externalBin": ["binaries/headroom-statusline"],
     "macOS": {
       "minimumSystemVersion": "26.0"
     }

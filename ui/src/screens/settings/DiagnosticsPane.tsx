@@ -39,7 +39,7 @@ export function DiagnosticsPane({ snapshot }: { readonly snapshot: UsageSnapshot
         {sources.length === 0 ? <SettingsRow label="Waiting for source health…" /> : sources.map((source) => { const status = sourceStatus(source); return <SettingsRow key={source.source} label={SOURCE_NAMES[source.source]} description={<UpdatedAgo timestamp={source.lastSuccess} />}><StatusChip tone={status.tone}>{status.text}</StatusChip></SettingsRow>; })}
       </SettingsGroup>
       <SettingsGroup heading="About">
-        <SettingsRow label="Logs" description="~/Library/Logs/dev.howisit.app · last 7 days"><button className="capsule-button ctl" onClick={() => { if (isTauriRuntime()) void revealLogs().catch(() => undefined); }}>Reveal Logs</button></SettingsRow>
+        <SettingsRow label="Logs" description="~/Library/Logs/dev.headroom.app · last 7 days"><button className="capsule-button ctl" onClick={() => { if (isTauriRuntime()) void revealLogs().catch(() => undefined); }}>Reveal Logs</button></SettingsRow>
         <SettingsRow label="Version"><span className="settings-value">{version === null ? "Loading…" : `${version} · local build`}</span></SettingsRow>
       </SettingsGroup>
     </>

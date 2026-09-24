@@ -24,7 +24,7 @@ fn sequential_unchained_process_p95_meets_budget() {
     let mut durations = (0..RUNS)
         .map(|_| {
             let started = Instant::now();
-            let mut child = Command::new(env!("CARGO_BIN_EXE_howisit-statusline"))
+            let mut child = Command::new(env!("CARGO_BIN_EXE_headroom-statusline"))
                 .args([
                     "--out-dir",
                     out_dir.path().to_str().expect("temp path should be UTF-8"),

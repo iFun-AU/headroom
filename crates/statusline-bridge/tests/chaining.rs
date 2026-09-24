@@ -27,7 +27,7 @@ fn configure(out_dir: &Path, command: &str) {
 }
 
 fn run_bridge(out_dir: &Path) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_howisit-statusline"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_headroom-statusline"))
         .args([
             "--out-dir",
             out_dir.to_str().expect("temp path should be UTF-8"),

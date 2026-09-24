@@ -4,7 +4,7 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 output_dir="$repo_dir/src-tauri/binaries"
-binary_name="howisit-statusline"
+binary_name="headroom-statusline"
 target_triple=${1:-${TAURI_ENV_TARGET_TRIPLE:-}}
 
 if [ -z "$target_triple" ]; then

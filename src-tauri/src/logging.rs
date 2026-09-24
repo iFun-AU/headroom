@@ -36,7 +36,7 @@ pub fn init(log_directory: &Path) -> Result<LogGuard, LoggingError> {
     fs::create_dir_all(log_directory)?;
     let writer = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
-        .filename_prefix("how-is-it")
+        .filename_prefix("headroom")
         .filename_suffix("log")
         .max_log_files(7)
         .build(log_directory)?;

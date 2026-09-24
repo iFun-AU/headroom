@@ -1,5 +1,5 @@
-//! Native process entry point for How Is It.
+//! Native process entry point for Headroom.
 
 fn main() -> tauri::Result<()> {
-    how_is_it::run()
+    headroom::run()
 }

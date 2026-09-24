@@ -15,8 +15,8 @@ use usage_sources::scheduler::Scheduler;
 
 use crate::runtime::trigger_visible_refresh;
 
-const ROOT_VARIABLE: &str = "HOW_IS_IT_SOAK_ROOT";
-const UI_INTERVAL_VARIABLE: &str = "HOW_IS_IT_SOAK_UI_INTERVAL_MS";
+const ROOT_VARIABLE: &str = "HEADROOM_SOAK_ROOT";
+const UI_INTERVAL_VARIABLE: &str = "HEADROOM_SOAK_UI_INTERVAL_MS";
 const DEFAULT_UI_INTERVAL: Duration = Duration::from_secs(30);
 const MIN_UI_INTERVAL: Duration = Duration::from_millis(100);
 

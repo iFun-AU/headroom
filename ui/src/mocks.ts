@@ -131,7 +131,7 @@ export const MOCK_SETTINGS_STATE: SettingsState = {
 export const MOCK_READ_ONLY_SETTINGS: SettingsState = {
   ...MOCK_SETTINGS_STATE,
   readOnly: true,
-  notice: "Settings were created by a newer version of How Is It. Changes can’t be saved.",
+  notice: "Settings were created by a newer version of Headroom. Changes can’t be saved.",
 };
 
 export const MOCK_BRIDGE_STATUS: BridgeStatus = {
@@ -184,7 +184,7 @@ export const MOCK_CARD_STATES: readonly {
   { title: "Critical · ≥ 90%", provider: "claude", usage: mockProviderUsage("claude", { state: "connected" }, 95, 88), notice: true },
   { title: "Limit reached · 100%", provider: "codex", usage: withWindows(mockProviderUsage("codex"), { session: { used: 100 }, weekly: { used: 91 } }) },
   { title: "Loading", provider: "claude", usage: null },
-  { title: "Not configured · Claude", provider: "claude", usage: { ...mockProviderUsage("claude"), windows: [], status: { state: "notConfigured", hint: "How Is It gets Claude limits from Claude Code’s status line. Enable it once and your bars update after every response." } } },
+  { title: "Not configured · Claude", provider: "claude", usage: { ...mockProviderUsage("claude"), windows: [], status: { state: "notConfigured", hint: "Headroom gets Claude limits from Claude Code’s status line. Enable it once and your bars update after every response." } } },
   { title: "Not configured · Codex", provider: "codex", usage: { ...mockProviderUsage("codex"), windows: [], status: { state: "notConfigured", hint: "Install Codex CLI or set its path in Settings." } } },
   { title: "Degraded · data still shown", provider: "codex", usage: withStatus(mockProviderUsage("codex"), { state: "degraded", reason: "Codex app-server stopped; using session files" }) },
   { title: "Stale · no poller in v1", provider: "claude", usage: withStatus(mockProviderUsage("claude"), { state: "stale" }) },

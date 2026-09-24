@@ -10,17 +10,17 @@ output_dir="$repo_root/target/soak"
 build_target_dir="$repo_root/target/soak-build"
 temp_base="${TMPDIR:-/tmp}"
 temp_base="${temp_base%/}"
-smoke_mode="${HOW_IS_IT_SOAK_SMOKE:-0}"
-keep_root="${HOW_IS_IT_SOAK_KEEP_ROOT:-0}"
-skip_build="${HOW_IS_IT_SOAK_SKIP_BUILD:-0}"
+smoke_mode="${HEADROOM_SOAK_SMOKE:-0}"
+keep_root="${HEADROOM_SOAK_KEEP_ROOT:-0}"
+skip_build="${HEADROOM_SOAK_SKIP_BUILD:-0}"
 
 if [[ "$smoke_mode" == "1" ]]; then
-  duration_seconds="${HOW_IS_IT_SOAK_DURATION_SECONDS:-20}"
-  sample_seconds="${HOW_IS_IT_SOAK_SAMPLE_SECONDS:-5}"
-  idle_seconds="${HOW_IS_IT_SOAK_IDLE_SECONDS:-20}"
-  cpu_sample_seconds="${HOW_IS_IT_SOAK_CPU_SAMPLE_SECONDS:-2}"
-  settle_seconds="${HOW_IS_IT_SOAK_SETTLE_SECONDS:-2}"
-  ui_interval_ms="${HOW_IS_IT_SOAK_UI_INTERVAL_MS:-5000}"
+  duration_seconds="${HEADROOM_SOAK_DURATION_SECONDS:-20}"
+  sample_seconds="${HEADROOM_SOAK_SAMPLE_SECONDS:-5}"
+  idle_seconds="${HEADROOM_SOAK_IDLE_SECONDS:-20}"
+  cpu_sample_seconds="${HEADROOM_SOAK_CPU_SAMPLE_SECONDS:-2}"
+  settle_seconds="${HEADROOM_SOAK_SETTLE_SECONDS:-2}"
+  ui_interval_ms="${HEADROOM_SOAK_UI_INTERVAL_MS:-5000}"
   csv_path="$output_dir/smoke.csv"
   cpu_path="$output_dir/smoke-cpu.csv"
   leak_path="$output_dir/smoke-leaks.txt"
@@ -70,7 +70,7 @@ mkdir -p "$output_dir"
 : > "$output_dir/app.stdout.log"
 : > "$output_dir/footprint.log"
 
-soak_root="$(mktemp -d "$temp_base/how-is-it-soak.XXXXXX")"
+soak_root="$(mktemp -d "$temp_base/headroom-soak.XXXXXX")"
 app_pid=""
 generator_pid=""
 logged_child_pid=""
@@ -88,7 +88,7 @@ cleanup() {
   fi
   if [[ "$keep_root" != "1" && -d "$soak_root" ]]; then
     case "$soak_root" in
-      "$temp_base"/how-is-it-soak.*) rm -rf -- "$soak_root" ;;
+      "$temp_base"/headroom-soak.*) rm -rf -- "$soak_root" ;;
       *) printf 'soak: refusing to remove unexpected path %s\n' "$soak_root" >&2 ;;
     esac
   fi
@@ -114,9 +114,9 @@ if [[ "$skip_build" != "1" ]]; then
   (cd "$repo_root" && CARGO_TARGET_DIR="$build_target_dir" cargo tauri build --bundles app)
 fi
 
-release_bundle="$build_target_dir/release/bundle/macos/How Is It.app"
+release_bundle="$build_target_dir/release/bundle/macos/Headroom.app"
 [[ -d "$release_bundle" ]] || fail "release app bundle was not found"
-instrumented_bundle="$soak_root/How Is It.app"
+instrumented_bundle="$soak_root/Headroom.app"
 ditto "$release_bundle" "$instrumented_bundle"
 entitlements="$soak_root/soak-entitlements.plist"
 cat > "$entitlements" <<'EOF'
@@ -124,20 +124,20 @@ cat > "$entitlements" <<'EOF'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>com.apple.security.get-task-allow</key><true/></dict></plist>
 EOF
-app_binary="$instrumented_bundle/Contents/MacOS/how-is-it"
+app_binary="$instrumented_bundle/Contents/MacOS/headroom"
 codesign --force --sign - --entitlements "$entitlements" "$instrumented_bundle"
 
 home_root="$soak_root/home"
 data_root="$soak_root/data"
 codex_home="$soak_root/codex"
 claude_dir="$soak_root/claude"
-app_support="$data_root/dev.howisit.app"
-logs_dir="$home_root/Library/Logs/dev.howisit.app"
+app_support="$data_root/dev.headroom.app"
+logs_dir="$home_root/Library/Logs/dev.headroom.app"
 rollout_file="$codex_home/sessions/soak/rollout.jsonl"
 claude_file="$claude_dir/projects/soak/session.jsonl"
 bridge_file="$app_support/claude-rate-limits.json"
 bridge_rewrite_log="$soak_root/bridge-rewrites.log"
-bridge_binary="$app_support/bin/howisit-statusline"
+bridge_binary="$app_support/bin/headroom-statusline"
 fake_codex="$soak_root/fake-codex"
 active_marker="$soak_root/active"
 fixture_timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -203,8 +203,8 @@ cat > "$bridge_file" <<EOF
 EOF
 
 printf 'soak: launching isolated release app from %s\n' "$app_binary"
-HOW_IS_IT_SOAK_ROOT="$soak_root" \
-HOW_IS_IT_SOAK_UI_INTERVAL_MS="$ui_interval_ms" \
+HEADROOM_SOAK_ROOT="$soak_root" \
+HEADROOM_SOAK_UI_INTERVAL_MS="$ui_interval_ms" \
 CODEX_HOME="$codex_home" \
 CLAUDE_CONFIG_DIR="$claude_dir" \
   "$app_binary" >> "$output_dir/app.stdout.log" 2>&1 &
@@ -213,7 +213,7 @@ printf 'soak: app pid=%s\n' "$app_pid"
 
 for _ in $(seq 1 60); do
   kill -0 "$app_pid" 2>/dev/null || fail "release app exited during startup"
-  log_file="$(find "$logs_dir" -maxdepth 1 -type f -name 'how-is-it*.log' -print -quit)"
+  log_file="$(find "$logs_dir" -maxdepth 1 -type f -name 'headroom*.log' -print -quit)"
   if [[ -n "$log_file" ]] && grep -q 'codex app-server started' "$log_file"; then
     logged_child_pid="$(grep 'codex app-server started' "$log_file" | tail -1 | grep -Eo 'pid=[0-9]+' | cut -d= -f2 || true)"
     break

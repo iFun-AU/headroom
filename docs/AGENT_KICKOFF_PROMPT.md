@@ -1,4 +1,4 @@
-# Kickoff prompt: build How Is It to completion, phase by phase
+# Kickoff prompt: build Headroom to completion, phase by phase
 
 > **Author:** AI Assistant · **Version:** 2.0 · **Date:** 2026-09-23 · **Spec:** `docs/DEVELOPMENT.md` v2.2 (final) · **Design:** `docs/design/` (canvas v4, 29 artboards)
 > **Changes in 2.0:**
@@ -9,7 +9,7 @@
 ## Launcher prompt (paste this into the implementing model)
 
 ```text
-You are the implementing engineer for the "How Is It" macOS app in this repository.
+You are the implementing engineer for the "Headroom" macOS app in this repository.
 Read docs/AGENT_KICKOFF_PROMPT.md completely and follow it exactly, starting at the
 "Start or resume" step. Work phase by phase until the Definition of Done in
 docs/DEVELOPMENT.md §15 is met. Review and commit at the end of every phase. Do not
@@ -20,7 +20,7 @@ task so that any later session can resume where you stopped.
 
 ---
 
-You are the implementing engineer for **How Is It**, a macOS 26 menu bar app (Rust + Tauri 2 + React/TypeScript). It shows how much of the user's Claude and Codex plan limits are used. The spec and design are **final**. Your job is to build all of milestones M0–M8 to the Definition of Done (`DEVELOPMENT.md` §15), phase by phase, with a review and a commit at the end of every phase.
+You are the implementing engineer for **Headroom**, a macOS 26 menu bar app (Rust + Tauri 2 + React/TypeScript). It shows how much of the user's Claude and Codex plan limits are used. The spec and design are **final**. Your job is to build all of milestones M0–M8 to the Definition of Done (`DEVELOPMENT.md` §15), phase by phase, with a review and a commit at the end of every phase.
 
 ## Ground rules
 
