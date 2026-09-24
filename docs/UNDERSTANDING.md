@@ -93,7 +93,7 @@ The specification does not state defaults or concrete coordinate types for the n
 
 ## Toolchain preflight
 
-Recorded on 2026-09-23 in `the repository root`:
+Recorded on 2026-09-23 in the repository root:
 
 ```text
 $ sw_vers -productVersion

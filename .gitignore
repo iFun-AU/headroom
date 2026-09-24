@@ -7,3 +7,20 @@ src-tauri/binaries/
 src-tauri/gen/schemas/
 .env*
 docs/design/source/__pycache__/
+
+# Python caches (docs/design/source scripts)
+__pycache__/
+*.pyc
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+*~
+
+# Personal Claude Code settings; .claude/launch.json is shared
+.claude/settings.local.json
+.claude/worktrees/
+
+# Settings backups written by the status-line bridge installer
+*.headroom-backup-*
