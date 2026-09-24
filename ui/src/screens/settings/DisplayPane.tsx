@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import type { Settings } from "../../bindings/Settings";
 import type { WidgetVariant } from "../../bindings/WidgetVariant";
+import type { WidgetWindows } from "../../bindings/WidgetWindows";
 import { SettingsGroup, SettingsRow } from "../../components/SettingsGroup";
 import { Switch } from "../../components/Switch";
 
@@ -17,12 +18,14 @@ export function DisplayPane({ settings, disabled, save }: { readonly settings: S
       <SettingsGroup heading="General">
         <SettingsRow label="Launch at login"><Switch checked={settings.launchAtLogin} label="Launch at login" disabled={disabled} onChange={(launchAtLogin) => { save({ ...settings, launchAtLogin }); }} /></SettingsRow>
         <SettingsRow label="Show Dock icon" description="Off keeps Headroom in the menu bar only"><Switch checked={settings.showDockIcon} label="Show Dock icon" disabled={disabled} onChange={(showDockIcon) => { save({ ...settings, showDockIcon }); }} /></SettingsRow>
-        <SettingsRow label="Menu bar" description="Weekly limits as text or stacked bars (Claude on top)"><select className="settings-select ctl" aria-label="Menu bar style" value={settings.trayStyle} disabled={disabled} onChange={(event) => { save({ ...settings, trayStyle: event.currentTarget.value === "Bars" ? "Bars" : "Numbers" }); }}><option value="Numbers">Numbers</option><option value="Bars">Bars</option></select></SettingsRow>
+        <SettingsRow label="Menu bar" description="Limits as text or stacked bars (Claude on top)"><select className="settings-select ctl" aria-label="Menu bar style" value={settings.trayStyle} disabled={disabled} onChange={(event) => { save({ ...settings, trayStyle: event.currentTarget.value === "Bars" ? "Bars" : "Numbers" }); }}><option value="Numbers">Numbers</option><option value="Bars">Bars</option></select></SettingsRow>
+        <SettingsRow label="Menu bar shows" description="A plan without this limit shows its other one, labeled"><select className="settings-select ctl" aria-label="Menu bar limit" value={settings.trayWindow} disabled={disabled} onChange={(event) => { save({ ...settings, trayWindow: event.currentTarget.value === "FiveHour" ? "FiveHour" : "Weekly" }); }}><option value="FiveHour">5-hour limit</option><option value="Weekly">Weekly limit</option></select></SettingsRow>
         <SettingsRow label="Keep dashboard on top" description="Also available from the pin button in the dashboard toolbar"><Switch checked={settings.mainAlwaysOnTop} label="Keep dashboard on top" disabled={disabled} onChange={(mainAlwaysOnTop) => { save({ ...settings, mainAlwaysOnTop }); }} /></SettingsRow>
       </SettingsGroup>
       <SettingsGroup heading="Floating widget" foot="The widget always stays on top. Drag it anywhere; it snaps to screen edges.">
         <SettingsRow label="Show floating widget"><Switch checked={settings.widget.visible} label="Show floating widget" disabled={disabled} onChange={(visible) => { save({ ...settings, widget: { ...settings.widget, visible } }); }} /></SettingsRow>
         <SettingsRow label="Style"><select className="settings-select ctl" aria-label="Widget style" value={settings.widget.variant} disabled={disabled} onChange={(event) => { save({ ...settings, widget: { ...settings.widget, variant: event.currentTarget.value as WidgetVariant } }); }}><option>Pill</option><option>Stack</option><option>Mini</option></select></SettingsRow>
+        <SettingsRow label="Shows" description="Mini fits one limit and shows the 5-hour one when both are chosen"><select className="settings-select ctl" aria-label="Widget limits" value={settings.widget.windows} disabled={disabled} onChange={(event) => { save({ ...settings, widget: { ...settings.widget, windows: event.currentTarget.value as WidgetWindows } }); }}><option value="Both">5-hour and weekly</option><option value="FiveHour">5-hour limit</option><option value="Weekly">Weekly limit</option></select></SettingsRow>
         <SettingsRow label="Opacity"><input className="range" type="range" min="40" max="100" value={opacity} disabled={disabled} aria-label="Widget opacity" onChange={(event) => { setOpacity(Number(event.currentTarget.value)); }} onPointerUp={commitOpacity} onBlur={commitOpacity} /><span className="settings-value num">{String(opacity)}%</span></SettingsRow>
       </SettingsGroup>
     </>

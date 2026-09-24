@@ -19,7 +19,7 @@ use usage_core::{ProviderUsage, UsageSnapshot, WindowKind, log_trunc};
 use crate::{
     commands::{Route, WindowTarget, quit_app_impl, refresh_now_impl, show_window_impl},
     runtime::RuntimeState,
-    settings::TrayStyle,
+    settings::{TrayStyle, TrayWindow},
 };
 
 const TRAY_ID: &str = "main";
@@ -154,11 +154,14 @@ pub fn refresh(app: &AppHandle) {
 
 /// Updates tray text and image only when their derived values change.
 pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
-    let style = app
+    let (style, window) = app
         .try_state::<RuntimeState>()
-        .map(|runtime| runtime.settings.snapshot().settings.tray_style)
+        .map(|runtime| {
+            let settings = runtime.settings.snapshot().settings;
+            (settings.tray_style, settings.tray_window)
+        })
         .unwrap_or_default();
-    let next = presentation(snapshot, style, menu_bar(app));
+    let next = presentation(snapshot, style, window, menu_bar(app));
     let Some(state) = app.try_state::<TrayState>() else {
         return;
     };
@@ -224,10 +227,26 @@ fn menu_bar(app: &AppHandle) -> MenuBar {
     }
 }
 
-/// Numbers style titles each provider's weekly limit (decision D-025) and the
+/// One provider's menu-bar value: the chosen window, or the provider's other
+/// window when its plan lacks the chosen one (e.g. weekly-only Codex plans).
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Shown {
+    used: f64,
+    kind: WindowKind,
+    substitute: bool,
+}
+
+/// Numbers style titles each provider's chosen window (decision D-025) and the
 /// template badge reflects the highest window of any kind; Bars style draws
-/// the weekly limits as stacked bars with no title (decision D-026).
-fn presentation(snapshot: &UsageSnapshot, style: TrayStyle, menu_bar: MenuBar) -> TrayPresentation {
+/// the chosen windows as stacked bars with no title (decisions D-026, D-029).
+/// A substituted window is named in the title and tooltip, since the bars have
+/// room only for digits.
+fn presentation(
+    snapshot: &UsageSnapshot,
+    style: TrayStyle,
+    window: TrayWindow,
+    menu_bar: MenuBar,
+) -> TrayPresentation {
     let highest = snapshot
         .claude
         .windows
@@ -240,29 +259,31 @@ fn presentation(snapshot: &UsageSnapshot, style: TrayStyle, menu_bar: MenuBar) -
         Some(used) if used >= 75.0 => TrayIconState::Warning,
         _ => TrayIconState::Normal,
     };
+    let claude = shown(&snapshot.claude, window);
+    let codex = shown(&snapshot.codex, window);
+    let tooltip = tooltip(window, claude, codex);
     if style == TrayStyle::Bars {
-        let claude = weekly_used(&snapshot.claude);
-        let codex = weekly_used(&snapshot.codex);
         return TrayPresentation {
             title: String::new(),
-            tooltip: weekly_tooltip(claude, codex),
+            tooltip,
             image: TrayImage::Bars {
-                claude: claude.map(round_percent),
-                codex: codex.map(round_percent),
+                claude: claude.map(|shown| round_percent(shown.used)),
+                codex: codex.map(|shown| round_percent(shown.used)),
                 menu_bar,
             },
         };
     }
-    let weekly = [
-        ("C", weekly_used(&snapshot.claude)),
-        ("X", weekly_used(&snapshot.codex)),
-    ]
-    .into_iter()
-    .filter_map(|(short, used)| used.map(|used| (short, used)))
-    .collect::<Vec<_>>();
-    let title = weekly
-        .iter()
-        .map(|(short, used)| format!("{short} {used:.0}%"))
+    let title = [("C", claude), ("X", codex)]
+        .into_iter()
+        .filter_map(|(short, shown)| {
+            shown.map(|shown| {
+                if shown.substitute {
+                    format!("{short} {} {:.0}%", short_label(shown.kind), shown.used)
+                } else {
+                    format!("{short} {:.0}%", shown.used)
+                }
+            })
+        })
         .collect::<Vec<_>>()
         .join(" · ");
     TrayPresentation {
@@ -271,20 +292,66 @@ fn presentation(snapshot: &UsageSnapshot, style: TrayStyle, menu_bar: MenuBar) -
         } else {
             format!(" {title}")
         },
-        tooltip: weekly_tooltip(weekly_used(&snapshot.claude), weekly_used(&snapshot.codex)),
+        tooltip,
         image: TrayImage::Template(icon),
     }
 }
 
-fn weekly_tooltip(claude: Option<f64>, codex: Option<f64>) -> String {
+fn shown(usage: &ProviderUsage, window: TrayWindow) -> Option<Shown> {
+    let (chosen, other) = match window {
+        TrayWindow::FiveHour => (WindowKind::Session, WindowKind::Weekly),
+        TrayWindow::Weekly => (WindowKind::Weekly, WindowKind::Session),
+    };
+    let find = |kind: WindowKind, substitute: bool| {
+        usage
+            .windows
+            .iter()
+            .filter(|window| window.kind == kind)
+            .map(|window| window.used.get())
+            .max_by(f64::total_cmp)
+            .map(|used| Shown {
+                used,
+                kind,
+                substitute,
+            })
+    };
+    find(chosen, false).or_else(|| find(other, true))
+}
+
+fn tooltip(window: TrayWindow, claude: Option<Shown>, codex: Option<Shown>) -> String {
     let parts = [("Claude", claude), ("Codex", codex)]
         .into_iter()
-        .filter_map(|(name, used)| used.map(|used| format!("{name} {used:.0}%")))
+        .filter_map(|(name, shown)| {
+            shown.map(|shown| {
+                if shown.substitute {
+                    format!("{name} {} {:.0}%", long_label(shown.kind), shown.used)
+                } else {
+                    format!("{name} {:.0}%", shown.used)
+                }
+            })
+        })
         .collect::<Vec<_>>();
     if parts.is_empty() {
-        "Headroom".to_owned()
-    } else {
-        format!("Weekly limits: {}", parts.join(", "))
+        return "Headroom".to_owned();
+    }
+    let heading = match window {
+        TrayWindow::FiveHour => "5-hour",
+        TrayWindow::Weekly => "Weekly",
+    };
+    format!("{heading} limits: {}", parts.join(", "))
+}
+
+const fn short_label(kind: WindowKind) -> &'static str {
+    match kind {
+        WindowKind::Session => "5h",
+        _ => "wk",
+    }
+}
+
+const fn long_label(kind: WindowKind) -> &'static str {
+    match kind {
+        WindowKind::Session => "5-hour",
+        _ => "weekly",
     }
 }
 
@@ -295,15 +362,6 @@ fn weekly_tooltip(claude: Option<f64>, codex: Option<f64>) -> String {
 )]
 fn round_percent(used: f64) -> u8 {
     used.round().clamp(0.0, 100.0) as u8
-}
-
-fn weekly_used(usage: &ProviderUsage) -> Option<f64> {
-    usage
-        .windows
-        .iter()
-        .filter(|window| window.kind == WindowKind::Weekly)
-        .map(|window| window.used.get())
-        .max_by(f64::total_cmp)
 }
 
 fn toggle_popover(app: &AppHandle) {
@@ -388,7 +446,7 @@ mod tests {
     };
 
     use super::{MenuBar, TrayIconState, TrayImage, presentation};
-    use crate::settings::TrayStyle;
+    use crate::settings::{TrayStyle, TrayWindow};
     use WindowKind::{Session, Weekly};
 
     #[test]
@@ -414,16 +472,56 @@ mod tests {
     }
 
     #[test]
-    fn no_weekly_window_leaves_title_empty() {
+    fn no_windows_leave_title_empty() {
         let empty = numbers(&snapshot(&[], &[]));
         assert_eq!(empty.title, "");
+        assert_eq!(empty.tooltip, "Headroom");
         assert_eq!(empty.image, TrayImage::Template(TrayIconState::Normal));
+    }
 
-        let session_only = numbers(&snapshot(&[(Session, 80.0)], &[]));
-        assert_eq!(session_only.title, "");
+    #[test]
+    fn a_missing_chosen_window_falls_back_to_the_other_one_labeled() {
+        let session_only = numbers(&snapshot(&[(Session, 80.0)], &[(Weekly, 12.0)]));
+        assert_eq!(session_only.title, " C 5h 80% · X 12%");
+        assert_eq!(
+            session_only.tooltip,
+            "Weekly limits: Claude 5-hour 80%, Codex 12%"
+        );
         assert_eq!(
             session_only.image,
             TrayImage::Template(TrayIconState::Warning)
+        );
+    }
+
+    #[test]
+    fn five_hour_choice_shows_session_windows() {
+        let fixture = snapshot(&[(Session, 62.0), (Weekly, 41.0)], &[(Weekly, 78.0)]);
+        let result = presentation(
+            &fixture,
+            TrayStyle::Numbers,
+            TrayWindow::FiveHour,
+            MenuBar::Dark,
+        );
+        assert_eq!(result.title, " C 62% · X wk 78%");
+        assert_eq!(
+            result.tooltip,
+            "5-hour limits: Claude 62%, Codex weekly 78%"
+        );
+
+        let bars = presentation(
+            &fixture,
+            TrayStyle::Bars,
+            TrayWindow::FiveHour,
+            MenuBar::Dark,
+        );
+        assert_eq!(bars.title, "");
+        assert_eq!(
+            bars.image,
+            TrayImage::Bars {
+                claude: Some(62),
+                codex: Some(78),
+                menu_bar: MenuBar::Dark,
+            }
         );
     }
 
@@ -432,6 +530,7 @@ mod tests {
         let result = presentation(
             &snapshot(&[(Session, 99.0), (Weekly, 41.4)], &[(Weekly, 77.6)]),
             TrayStyle::Bars,
+            TrayWindow::Weekly,
             MenuBar::Dark,
         );
         assert_eq!(result.title, "");
@@ -445,7 +544,12 @@ mod tests {
             }
         );
 
-        let empty = presentation(&snapshot(&[], &[]), TrayStyle::Bars, MenuBar::Light);
+        let empty = presentation(
+            &snapshot(&[], &[]),
+            TrayStyle::Bars,
+            TrayWindow::Weekly,
+            MenuBar::Light,
+        );
         assert_eq!(
             empty.image,
             TrayImage::Bars {
@@ -458,7 +562,12 @@ mod tests {
     }
 
     fn numbers(snapshot: &UsageSnapshot) -> super::TrayPresentation {
-        presentation(snapshot, TrayStyle::Numbers, MenuBar::Dark)
+        presentation(
+            snapshot,
+            TrayStyle::Numbers,
+            TrayWindow::Weekly,
+            MenuBar::Dark,
+        )
     }
 
     fn snapshot(claude: &[(WindowKind, f64)], codex: &[(WindowKind, f64)]) -> UsageSnapshot {

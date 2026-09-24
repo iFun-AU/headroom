@@ -166,6 +166,11 @@ function WidgetGallery() {
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" forceHover />
       <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" />
       <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" />
+      <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" windowsOverride="FiveHour" />
+      <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" windowsOverride="FiveHour" />
+      <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" windowsOverride="Weekly" />
+      <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" windowsOverride="Weekly" />
+      <Widget snapshot={WEEKLY_ONLY_CODEX_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" windowsOverride="Both" forceHover />
     </main>
   );
 }

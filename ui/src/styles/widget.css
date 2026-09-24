@@ -107,6 +107,12 @@
   font-weight: 600;
 }
 
+/* Names a stand-in window when the plan lacks the chosen one. */
+.widget-pill__values > .widget-window-tag {
+  color: var(--label2);
+  font-weight: 500;
+}
+
 .widget-divider {
   background: var(--sep);
   flex: 0 0 1px;

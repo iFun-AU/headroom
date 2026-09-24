@@ -48,6 +48,32 @@ pub enum TrayStyle {
     Bars,
 }
 
+/// Which limit window the menu bar shows for each provider.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum TrayWindow {
+    /// The 5-hour (session) limit.
+    FiveHour,
+    /// The weekly limit.
+    #[default]
+    Weekly,
+}
+
+/// Which limit windows the floating widget shows for each provider.
+///
+/// A provider without the chosen window shows the window it does have, labeled.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum WidgetWindows {
+    /// Only the 5-hour (session) limit.
+    FiveHour,
+    /// Only the weekly limit.
+    Weekly,
+    /// The 5-hour and weekly limits; Mini, which fits one, shows the 5-hour.
+    #[default]
+    Both,
+}
+
 /// Persisted floating-widget presentation and position.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -63,6 +89,8 @@ pub struct WidgetSettings {
     pub variant: WidgetVariant,
     /// Window opacity in the inclusive range 0.4 through 1.0.
     pub opacity: f32,
+    /// Limit windows shown for each provider.
+    pub windows: WidgetWindows,
 }
 
 impl Default for WidgetSettings {
@@ -73,6 +101,7 @@ impl Default for WidgetSettings {
             y: None,
             variant: WidgetVariant::Pill,
             opacity: 1.0,
+            windows: WidgetWindows::Both,
         }
     }
 }
@@ -121,6 +150,8 @@ pub struct Settings {
     /// Menu-bar presentation style.
     #[serde(alias = "tray_style")]
     pub tray_style: TrayStyle,
+    /// Limit window shown in the menu bar.
+    pub tray_window: TrayWindow,
     /// Floating-widget settings.
     pub widget: WidgetSettings,
     /// Active polling interval, with a minimum of 60 seconds.
@@ -147,6 +178,7 @@ impl Default for Settings {
             show_dock_icon: false,
             main_always_on_top: false,
             tray_style: TrayStyle::Numbers,
+            tray_window: TrayWindow::Weekly,
             widget: WidgetSettings::default(),
             poll_active_secs: 120,
             poll_idle_secs: 600,

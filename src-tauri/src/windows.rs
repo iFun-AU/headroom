@@ -131,7 +131,9 @@ fn apply_window_settings(app: &AppHandle, next: &Settings, previous: Option<&Set
     if previous.is_none_or(|previous| previous.show_dock_icon != next.show_dock_icon) {
         apply_activation_policy(app, next.show_dock_icon);
     }
-    if previous.is_some_and(|previous| previous.tray_style != next.tray_style) {
+    if previous.is_some_and(|previous| {
+        previous.tray_style != next.tray_style || previous.tray_window != next.tray_window
+    }) {
         crate::tray::refresh(app);
     }
     if previous.is_none_or(|previous| previous.main_always_on_top != next.main_always_on_top) {

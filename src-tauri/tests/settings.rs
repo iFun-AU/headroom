@@ -5,8 +5,8 @@
 use std::{fs, path::Path};
 
 use headroom::settings::{
-    CURRENT_SCHEMA_VERSION, Settings, SettingsActorError, SettingsHandle, WidgetVariant,
-    load_settings, migrate, reset_settings, save_settings,
+    CURRENT_SCHEMA_VERSION, Settings, SettingsActorError, SettingsHandle, TrayWindow,
+    WidgetVariant, WidgetWindows, load_settings, migrate, reset_settings, save_settings,
 };
 use serde_json::{Value, json};
 use tempfile::tempdir;
@@ -46,6 +46,20 @@ fn pure_v0_migration_adds_version_and_preserves_known_values() {
     assert_eq!(migrated.codex_path.as_deref(), Some("/tmp/codex"));
     assert_eq!(migrated.widget.variant, WidgetVariant::Mini);
     assert!((migrated.widget.opacity - 0.75).abs() < f32::EPSILON);
+}
+
+#[test]
+fn v1_file_without_window_choices_keeps_previous_display() {
+    let settings = migrate(json!({
+        "schemaVersion": 1,
+        "trayStyle": "Bars",
+        "widget": { "variant": "Stack", "opacity": 0.9 }
+    }))
+    .expect("v1 settings without window choices should load");
+
+    assert_eq!(settings.tray_window, TrayWindow::Weekly);
+    assert_eq!(settings.widget.windows, WidgetWindows::Both);
+    assert_eq!(settings.widget.variant, WidgetVariant::Stack);
 }
 
 #[test]
