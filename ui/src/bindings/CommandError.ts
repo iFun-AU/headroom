@@ -3,7 +3,7 @@
 /**
  * Public, deliberately bounded error returned by every Tauri command.
  */
-export type CommandError = { 
+export type CommandError = {
 /**
  * Safe user-facing failure summary.
  */

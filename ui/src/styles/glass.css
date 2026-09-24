@@ -22,6 +22,16 @@
   background: linear-gradient(155deg, var(--hl-a) 0%, transparent 30%), var(--glass-pop);
 }
 
+/* Main-window roots fill a native titled window, which macOS already rounds,
+   outlines and shadows. Drawing a second corner, edge or shadow in CSS left a
+   mismatched dark sliver in each corner, so these defer to the system. */
+.dashboard-root.glass,
+.settings-root.glass,
+.onboarding-root.glass {
+  border: 0;
+  box-shadow: none;
+}
+
 .card {
   background: linear-gradient(170deg, var(--hl-b) 0%, transparent 40%), var(--glass-card);
   border: 1px solid var(--card-edge);

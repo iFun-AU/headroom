@@ -4,19 +4,19 @@ import type { Effectiveness } from "./Effectiveness";
 /**
  * Claude bridge installation and behavioral status.
  */
-export type BridgeStatus = { 
+export type BridgeStatus = {
 /**
  * Whether Claude settings currently invoke our bridge.
  */
-installed: boolean, 
+installed: boolean,
 /**
  * Whether the bridge invokes an earlier configured command.
  */
-chained: boolean, 
+chained: boolean,
 /**
  * Behavioral confidence that Claude is invoking the bridge.
  */
-effective: Effectiveness, 
+effective: Effectiveness,
 /**
  * Claude settings path shown in diagnostics.
  */
