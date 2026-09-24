@@ -2,7 +2,26 @@
 
 Headroom is a macOS menu-bar app that shows Claude and Codex session limits, weekly limits, and recent token activity. It provides a compact popover, a full dashboard, an optional floating widget, and threshold/reset notifications.
 
-> **Local build only.** Version 1 is ad-hoc signed, not Developer ID signed or notarized, and is not a distributable release. Build and use it on the same Mac. The app requires macOS 26 or later.
+![Headroom dashboard showing Claude and Codex limits](docs/screenshots/dashboard.png)
+
+| Menu bar | Floating widget |
+| --- | --- |
+| ![Stacked Claude and Codex weekly bars in the menu bar](docs/screenshots/menu-bar.png) | ![Floating widget with Claude 5-hour and weekly, and Codex weekly limits](docs/screenshots/widget.png) |
+
+## Download
+
+**[Download Headroom.zip](https://github.com/iFun-AU/headroom/releases/latest/download/Headroom.zip)** (universal: Apple silicon and Intel, macOS 26 or later), or browse all [releases](https://github.com/iFun-AU/headroom/releases).
+
+1. Unzip it and move **Headroom.app** to `/Applications`.
+2. The app is ad-hoc signed, **not** notarized by Apple, so macOS blocks the first launch. Open it once, then choose **System Settings → Privacy & Security → Open Anyway**. If macOS instead says the app "is damaged", clear the download quarantine and open it again:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Headroom.app
+   ```
+
+3. Complete onboarding as described in [Install and first run](#install-and-first-run).
+
+Prefer not to trust a prebuilt binary? [Build it yourself](#build-the-universal-app) with one command; each release lists the commit it was built from and the zip's SHA-256.
 
 ## What it reads
 
@@ -14,11 +33,16 @@ Provider data, settings, and logs stay on the Mac. Codex authentication remains 
 
 ## Requirements
 
+To run:
+
 - macOS 26+
+- Codex CLI and/or Claude Code for the provider you want to monitor
+
+To build from source, additionally:
+
 - Xcode Command Line Tools
 - Rust 1.95+ with both Apple targets
 - Node.js and npm
-- Codex CLI and/or Claude Code for the provider you want to monitor
 
 The verified development baseline is macOS 27.0, Codex CLI 0.154.0, and Claude Code 2.1.273. `codex app-server` is experimental; if it becomes incompatible, Headroom keeps rollout-file data where possible and marks Codex as degraded.
 
@@ -54,7 +78,7 @@ Both `headroom` and its bundled `headroom-statusline` sidecar should report `x86
 
 ## Install and first run
 
-After building and signing, copy the app to `/Applications`:
+If you downloaded the release, skip to onboarding below. After building and signing, copy the app to `/Applications`:
 
 ```bash
 ditto \
@@ -68,7 +92,7 @@ Open **Headroom** from Finder and complete onboarding:
 2. Optionally enable real-time Claude limits. This is the only onboarding step that changes Claude settings.
 3. Choose **Allow Notifications** if you want threshold and reset alerts. If permission was denied, restore it in **System Settings → Notifications → Headroom**. Alerts also respect Focus settings.
 
-Because this build is not notarized, macOS may require the local-build open flow. Do not redistribute the bundle as a production installer.
+Because neither the release nor a local build is notarized, macOS may require the **Open Anyway** flow described in [Download](#download).
 
 ## Claude status-line bridge
 
