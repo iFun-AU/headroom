@@ -10,7 +10,7 @@ use tauri::{
 };
 use tauri_plugin_positioner::{Position, WindowExt};
 use tracing::warn;
-use usage_core::{UsageSnapshot, log_trunc};
+use usage_core::{ProviderUsage, UsageSnapshot, WindowKind, log_trunc};
 
 use crate::{
     commands::{Route, WindowTarget, quit_app_impl, refresh_now_impl, show_window_impl},
@@ -38,6 +38,7 @@ enum TrayIconState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TrayPresentation {
     title: String,
+    tooltip: String,
     icon: TrayIconState,
 }
 
@@ -71,6 +72,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         critical: Image::from_bytes(CRITICAL_ICON)?,
         current: Mutex::new(TrayPresentation {
             title: String::new(),
+            tooltip: String::new(),
             icon: TrayIconState::Normal,
         }),
     };
@@ -140,6 +142,13 @@ pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
             current.title.clone_from(&next.title);
         }
     }
+    if current.tooltip != next.tooltip {
+        if let Err(error) = tray.set_tooltip(Some(&next.tooltip)) {
+            warn!(error = %log_trunc(&error.to_string()), "could not update tray tooltip");
+        } else {
+            current.tooltip.clone_from(&next.tooltip);
+        }
+    }
     if current.icon != next.icon {
         if let Err(error) = tray.set_icon(Some(state.icon(next.icon))) {
             warn!(error = %log_trunc(&error.to_string()), "could not update tray icon");
@@ -149,6 +158,8 @@ pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
     }
 }
 
+/// Title shows each provider's weekly limit (decision D-025); the icon badge
+/// still reflects the highest window of any kind so a session warning shows.
 fn presentation(snapshot: &UsageSnapshot) -> TrayPresentation {
     let highest = snapshot
         .claude
@@ -157,23 +168,49 @@ fn presentation(snapshot: &UsageSnapshot) -> TrayPresentation {
         .chain(snapshot.codex.windows.iter())
         .map(|window| window.used.get())
         .max_by(f64::total_cmp);
-    let Some(highest) = highest else {
+    let icon = match highest {
+        Some(used) if used >= 90.0 => TrayIconState::Critical,
+        Some(used) if used >= 75.0 => TrayIconState::Warning,
+        _ => TrayIconState::Normal,
+    };
+    let weekly = [
+        ("C", "Claude", weekly_used(&snapshot.claude)),
+        ("X", "Codex", weekly_used(&snapshot.codex)),
+    ]
+    .into_iter()
+    .filter_map(|(short, name, used)| used.map(|used| (short, name, used)))
+    .collect::<Vec<_>>();
+    if weekly.is_empty() {
         return TrayPresentation {
             title: String::new(),
-            icon: TrayIconState::Normal,
+            tooltip: "How Is It".to_owned(),
+            icon,
         };
-    };
-    let icon = if highest >= 90.0 {
-        TrayIconState::Critical
-    } else if highest >= 75.0 {
-        TrayIconState::Warning
-    } else {
-        TrayIconState::Normal
-    };
+    }
+    let title = weekly
+        .iter()
+        .map(|(short, _, used)| format!("{short} {used:.0}%"))
+        .collect::<Vec<_>>()
+        .join(" · ");
+    let tooltip = weekly
+        .iter()
+        .map(|(_, name, used)| format!("{name} {used:.0}%"))
+        .collect::<Vec<_>>()
+        .join(", ");
     TrayPresentation {
-        title: format!(" {highest:.0}%"),
+        title: format!(" {title}"),
+        tooltip: format!("Weekly limits: {tooltip}"),
         icon,
     }
+}
+
+fn weekly_used(usage: &ProviderUsage) -> Option<f64> {
+    usage
+        .windows
+        .iter()
+        .filter(|window| window.kind == WindowKind::Weekly)
+        .map(|window| window.used.get())
+        .max_by(f64::total_cmp)
 }
 
 fn toggle_popover(app: &AppHandle) {
@@ -258,32 +295,42 @@ mod tests {
     };
 
     use super::{TrayIconState, presentation};
+    use WindowKind::{Session, Weekly};
 
     #[test]
-    fn highest_visible_window_controls_rounded_title_and_icon_state() {
-        let mut snapshot = snapshot(&[74.6], &[75.0]);
-        let result = presentation(&snapshot);
-        assert_eq!(result.title, " 75%");
+    fn title_shows_each_providers_weekly_limit() {
+        let result = presentation(&snapshot(
+            &[(Session, 62.0), (Weekly, 41.4)],
+            &[(Weekly, 78.0)],
+        ));
+        assert_eq!(result.title, " C 41% · X 78%");
+        assert_eq!(result.tooltip, "Weekly limits: Claude 41%, Codex 78%");
         assert_eq!(result.icon, TrayIconState::Warning);
-
-        snapshot.claude.windows[0].used = Percent::new(90.0).expect("finite fixture");
-        let result = presentation(&snapshot);
-        assert_eq!(result.title, " 90%");
-        assert_eq!(result.icon, TrayIconState::Critical);
     }
 
     #[test]
-    fn empty_and_sub_warning_snapshots_use_normal_template() {
-        let empty = snapshot(&[], &[]);
-        assert_eq!(presentation(&empty).title, "");
-        assert_eq!(presentation(&empty).icon, TrayIconState::Normal);
+    fn icon_still_reflects_the_highest_window_of_any_kind() {
+        let result = presentation(&snapshot(&[(Session, 95.0), (Weekly, 20.0)], &[]));
+        assert_eq!(result.title, " C 20%");
+        assert_eq!(result.icon, TrayIconState::Critical);
 
-        let normal = presentation(&snapshot(&[74.9], &[]));
-        assert_eq!(normal.title, " 75%");
+        let normal = presentation(&snapshot(&[], &[(Weekly, 74.9)]));
+        assert_eq!(normal.title, " X 75%");
         assert_eq!(normal.icon, TrayIconState::Normal);
     }
 
-    fn snapshot(claude: &[f64], codex: &[f64]) -> UsageSnapshot {
+    #[test]
+    fn no_weekly_window_leaves_title_empty() {
+        let empty = presentation(&snapshot(&[], &[]));
+        assert_eq!(empty.title, "");
+        assert_eq!(empty.icon, TrayIconState::Normal);
+
+        let session_only = presentation(&snapshot(&[(Session, 80.0)], &[]));
+        assert_eq!(session_only.title, "");
+        assert_eq!(session_only.icon, TrayIconState::Warning);
+    }
+
+    fn snapshot(claude: &[(WindowKind, f64)], codex: &[(WindowKind, f64)]) -> UsageSnapshot {
         UsageSnapshot {
             claude: provider(Provider::Claude, SourceKind::ClaudeStatusline, claude),
             codex: provider(Provider::Codex, SourceKind::CodexAppServer, codex),
@@ -291,14 +338,18 @@ mod tests {
         }
     }
 
-    fn provider(provider: Provider, source: SourceKind, values: &[f64]) -> ProviderUsage {
+    fn provider(
+        provider: Provider,
+        source: SourceKind,
+        values: &[(WindowKind, f64)],
+    ) -> ProviderUsage {
         ProviderUsage {
             provider,
             plan: None,
             windows: values
                 .iter()
-                .map(|value| LimitWindow {
-                    kind: WindowKind::Weekly,
+                .map(|(kind, value)| LimitWindow {
+                    kind: *kind,
                     used: Percent::new(*value).expect("finite fixture"),
                     resets_at: None,
                     reset_pending: false,

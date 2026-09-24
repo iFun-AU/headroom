@@ -50,6 +50,10 @@ launchAtLogin: boolean,
  */
 showDockIcon: boolean,
 /**
+ * Whether the dashboard window floats above other windows.
+ */
+mainAlwaysOnTop: boolean,
+/**
  * Floating-widget settings.
  */
 widget: WidgetSettings,

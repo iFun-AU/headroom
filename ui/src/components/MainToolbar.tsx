@@ -5,6 +5,7 @@
 import { useState } from "react";
 import type { Route } from "../bindings/Route";
 import { collapseToWidget, isTauriRuntime, refreshNow } from "../ipc";
+import { useSettings } from "../hooks/useSettings";
 import { UpdatedAgo } from "./Countdown";
 import { Icon } from "./Icon";
 
@@ -20,6 +21,13 @@ export function MainToolbar({
   readonly navigate: (route: Route) => void;
 }) {
   const [refreshing, setRefreshing] = useState(false);
+  const settingsState = useSettings();
+  const settings = settingsState.state?.settings;
+  const pinned = settings?.mainAlwaysOnTop === true;
+  const togglePin = () => {
+    if (settings === undefined || settingsState.state?.readOnly === true) return;
+    void settingsState.save({ ...settings, mainAlwaysOnTop: !pinned });
+  };
   const requestRefresh = () => {
     if (!isTauriRuntime()) return;
     setRefreshing(true);
@@ -44,6 +52,9 @@ export function MainToolbar({
       <div className="main-toolbar__actions">
         <span className="num"><UpdatedAgo timestamp={updatedAt} /></span>
         <span className="toolbar-button-group ctl">
+          <button aria-label="Keep dashboard on top" aria-pressed={pinned} title={pinned ? "Unpin from top" : "Keep on top"} onClick={togglePin} disabled={settings === undefined || settingsState.saving}>
+            <Icon name="pin" size={15} />
+          </button>
           <button className={refreshing ? "is-refreshing" : undefined} aria-label="Refresh usage" onClick={requestRefresh} disabled={refreshing}>
             <Icon name="refresh" size={15} />
           </button>

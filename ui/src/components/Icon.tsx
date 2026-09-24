@@ -23,6 +23,7 @@ export type IconName =
   | "menubar"
   | "average"
   | "opacity"
+  | "pin"
   | "pip"
   | "power"
   | "refresh"
@@ -68,6 +69,8 @@ function iconPaths(name: IconName): ReactNode {
       return <><path d="M4 7.5h16M4 16.5h16" /><circle cx="8" cy="7.5" r="2.2" /><circle cx="16" cy="16.5" r="2.2" /></>;
     case "opacity":
       return <><circle cx="12" cy="12" r="8" /><path d="M12 4v16M12 8h5.5M12 12h8M12 16h5.5" /></>;
+    case "pin":
+      return <><path d="M9 3.5h6l-1 5.5 3.5 3.5v1.5h-11V12.5L10 9Z" /><path d="M12 14v6.5" /></>;
     case "pip":
       return <><rect x="3" y="5" width="18" height="14" rx="3.5" /><rect x="11.5" y="11.5" width="7" height="5" rx="1.5" /></>;
     case "power":

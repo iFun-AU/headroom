@@ -17,6 +17,7 @@ export function DisplayPane({ settings, disabled, save }: { readonly settings: S
       <SettingsGroup heading="General">
         <SettingsRow label="Launch at login"><Switch checked={settings.launchAtLogin} label="Launch at login" disabled={disabled} onChange={(launchAtLogin) => { save({ ...settings, launchAtLogin }); }} /></SettingsRow>
         <SettingsRow label="Show Dock icon" description="Off keeps How Is It in the menu bar only"><Switch checked={settings.showDockIcon} label="Show Dock icon" disabled={disabled} onChange={(showDockIcon) => { save({ ...settings, showDockIcon }); }} /></SettingsRow>
+        <SettingsRow label="Keep dashboard on top" description="Also available from the pin button in the dashboard toolbar"><Switch checked={settings.mainAlwaysOnTop} label="Keep dashboard on top" disabled={disabled} onChange={(mainAlwaysOnTop) => { save({ ...settings, mainAlwaysOnTop }); }} /></SettingsRow>
       </SettingsGroup>
       <SettingsGroup heading="Floating widget" foot="The widget always stays on top. Drag it anywhere; it snaps to screen edges.">
         <SettingsRow label="Show floating widget"><Switch checked={settings.widget.visible} label="Show floating widget" disabled={disabled} onChange={(visible) => { save({ ...settings, widget: { ...settings.widget, visible } }); }} /></SettingsRow>

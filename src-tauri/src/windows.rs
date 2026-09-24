@@ -1,4 +1,5 @@
-//! Native window lifecycle, widget sizing, position persistence, and edge snapping.
+//! Native window lifecycle, widget sizing, position persistence, edge snapping,
+//! and recovery of a widget stranded off-screen after a display change.
 
 use std::{future::pending, pin::Pin, time::Duration};
 
@@ -18,6 +19,9 @@ use crate::{
 const MOVE_DEBOUNCE: Duration = Duration::from_millis(500);
 const SNAP_DISTANCE: f64 = 24.0;
 const SNAP_INSET: f64 = 12.0;
+/// How often a visible widget is checked against the connected displays.
+/// macOS offers no display-change event without `unsafe` Objective-C calls.
+const ON_SCREEN_CHECK: Duration = Duration::from_secs(2);
 
 /// Latest-only native window events consumed by the owned lifecycle task.
 pub struct WindowEvents {
@@ -81,6 +85,8 @@ pub async fn run(
     show_first_launch(&app, &initial);
     let mut applied = initial;
     let mut move_deadline: Option<Pin<Box<Sleep>>> = None;
+    let mut on_screen_check = tokio::time::interval(ON_SCREEN_CHECK);
+    on_screen_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
@@ -105,6 +111,11 @@ pub async fn run(
                 move_deadline = None;
                 settle_widget_position(&app, &settings).await;
             }
+            _ = on_screen_check.tick() => {
+                if applied.widget.visible {
+                    ensure_widget_on_screen(&app);
+                }
+            }
         }
     }
 }
@@ -119,6 +130,15 @@ async fn wait_for_deadline(deadline: &mut Option<Pin<Box<Sleep>>>) {
 fn apply_window_settings(app: &AppHandle, next: &Settings, previous: Option<&Settings>) {
     if previous.is_none_or(|previous| previous.show_dock_icon != next.show_dock_icon) {
         apply_activation_policy(app, next.show_dock_icon);
+    }
+    if previous.is_none_or(|previous| previous.main_always_on_top != next.main_always_on_top) {
+        if let Some(main) = app.get_webview_window("main") {
+            if let Err(error) = main.set_always_on_top(next.main_always_on_top) {
+                warn!(error = %log_trunc(&error.to_string()), "could not apply dashboard always-on-top");
+            }
+        } else {
+            warn!("main window is unavailable while applying always-on-top");
+        }
     }
     let Some(widget) = app.get_webview_window("widget") else {
         warn!("widget window is unavailable while applying settings");
@@ -149,6 +169,50 @@ fn apply_window_settings(app: &AppHandle, next: &Settings, previous: Option<&Set
         if let Err(error) = result {
             warn!(error = %log_trunc(&error.to_string()), "could not apply widget visibility");
         }
+    }
+    if next.widget.visible {
+        ensure_widget_on_screen(app);
+    }
+}
+
+/// Moves a visible widget back onto the nearest display's work area when its
+/// center is on no connected display, for example after unplugging a monitor.
+/// The resulting `Moved` event persists the new position.
+fn ensure_widget_on_screen(app: &AppHandle) {
+    let Some(widget) = app.get_webview_window("widget") else {
+        return;
+    };
+    let (Ok(position), Ok(size), Ok(scale), Ok(monitors)) = (
+        widget.outer_position(),
+        widget.outer_size(),
+        widget.scale_factor(),
+        widget.available_monitors(),
+    ) else {
+        warn!("could not read widget geometry or displays");
+        return;
+    };
+    let frames = monitors
+        .iter()
+        .map(|monitor| {
+            let monitor_scale = monitor.scale_factor();
+            let area = monitor.work_area();
+            let origin = area.position.to_logical::<f64>(monitor_scale);
+            let extent = area.size.to_logical::<f64>(monitor_scale);
+            LogicalFrame {
+                x: origin.x,
+                y: origin.y,
+                width: extent.width,
+                height: extent.height,
+            }
+        })
+        .collect::<Vec<_>>();
+    if let Some(target) = recover_position(
+        position.to_logical::<f64>(scale),
+        size.to_logical::<f64>(scale),
+        &frames,
+    ) && let Err(error) = widget.set_position(target)
+    {
+        warn!(error = %log_trunc(&error.to_string()), "could not move widget back on screen");
     }
 }
 
@@ -258,6 +322,46 @@ struct LogicalFrame {
     height: f64,
 }
 
+/// Returns an in-bounds position on the nearest frame when the widget's
+/// center lies on none of `frames`; `None` when it is visible or no display
+/// is known.
+fn recover_position(
+    position: LogicalPosition<f64>,
+    size: LogicalSize<f64>,
+    frames: &[LogicalFrame],
+) -> Option<LogicalPosition<f64>> {
+    let center_x = position.x + size.width / 2.0;
+    let center_y = position.y + size.height / 2.0;
+    let contains = |frame: &LogicalFrame| {
+        (frame.x..frame.x + frame.width).contains(&center_x)
+            && (frame.y..frame.y + frame.height).contains(&center_y)
+    };
+    if frames.iter().any(contains) {
+        return None;
+    }
+    let distance = |frame: &LogicalFrame| {
+        let dx = (frame.x - center_x)
+            .max(center_x - (frame.x + frame.width))
+            .max(0.0);
+        let dy = (frame.y - center_y)
+            .max(center_y - (frame.y + frame.height))
+            .max(0.0);
+        dx.hypot(dy)
+    };
+    let nearest = frames
+        .iter()
+        .min_by(|left, right| distance(left).total_cmp(&distance(right)))?;
+    let clamp = |value: f64, start: f64, extent: f64, length: f64| {
+        value
+            .min(start + extent - length - SNAP_INSET)
+            .max(start + SNAP_INSET)
+    };
+    Some(LogicalPosition::new(
+        clamp(position.x, nearest.x, nearest.width, size.width),
+        clamp(position.y, nearest.y, nearest.height, size.height),
+    ))
+}
+
 fn snap_position(
     position: LogicalPosition<f64>,
     size: LogicalSize<f64>,
@@ -284,7 +388,7 @@ fn snap_axis(position: f64, size: f64, frame_start: f64, frame_size: f64) -> f64
 mod tests {
     use tauri::{LogicalPosition, LogicalSize};
 
-    use super::{LogicalFrame, snap_position, widget_size};
+    use super::{LogicalFrame, recover_position, snap_position, widget_size};
     use crate::settings::WidgetVariant;
 
     #[test]
@@ -310,6 +414,59 @@ mod tests {
         assert_eq!(
             snap_position(LogicalPosition::new(720.0, 630.0), size, frame),
             LogicalPosition::new(688.0, 636.0)
+        );
+    }
+
+    #[test]
+    fn widget_stranded_on_a_removed_display_moves_onto_the_nearest_one() {
+        let laptop = LogicalFrame {
+            x: 0.0,
+            y: 25.0,
+            width: 1_512.0,
+            height: 920.0,
+        };
+        let size = LogicalSize::new(280.0, 72.0);
+        // Was on an external display to the right that is now disconnected.
+        assert_eq!(
+            recover_position(LogicalPosition::new(2_600.0, 400.0), size, &[laptop]),
+            Some(LogicalPosition::new(1_220.0, 400.0))
+        );
+        // Above and left of every display.
+        assert_eq!(
+            recover_position(LogicalPosition::new(-900.0, -500.0), size, &[laptop]),
+            Some(LogicalPosition::new(12.0, 37.0))
+        );
+    }
+
+    #[test]
+    fn visible_widget_or_unknown_displays_are_left_alone() {
+        let frames = [
+            LogicalFrame {
+                x: 0.0,
+                y: 0.0,
+                width: 1_512.0,
+                height: 945.0,
+            },
+            LogicalFrame {
+                x: 1_512.0,
+                y: -200.0,
+                width: 2_560.0,
+                height: 1_440.0,
+            },
+        ];
+        let size = LogicalSize::new(280.0, 72.0);
+        assert_eq!(
+            recover_position(LogicalPosition::new(2_600.0, 400.0), size, &frames),
+            None
+        );
+        // Partly past the edge but centered on a display: user placement wins.
+        assert_eq!(
+            recover_position(LogicalPosition::new(1_300.0, 100.0), size, &frames[..1]),
+            None
+        );
+        assert_eq!(
+            recover_position(LogicalPosition::new(99_999.0, 0.0), size, &[]),
+            None
         );
     }
 

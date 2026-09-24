@@ -256,7 +256,7 @@ export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAct
       {!disconnected && session?.used !== 100 ? (
         <>
           {showThresholdNotice && highestWindow !== undefined ? <StatusNotice window={highestWindow} /> : null}
-          {usage.windows.map((window) => <UsageBlock key={`${window.kind.kind}-${String(window.observedAt)}`} window={window} provider={provider} dimmed={stale} />)}
+          {usage.windows.map((window) => <UsageBlock key={window.kind.kind === "other" ? `other-${String(window.kind.minutes)}` : window.kind.kind} window={window} provider={provider} dimmed={stale} />)}
           {sparkline.length === 0 ? null : (
             <div className="provider-spark">
               <span><span><b className="cap">Today</b> · tokens on this Mac</span>{peakLabel === null || peakLabel === undefined ? null : <span>Peak {peakLabel}</span>}</span>

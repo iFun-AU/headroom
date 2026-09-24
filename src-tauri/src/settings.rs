@@ -104,6 +104,9 @@ pub struct Settings {
     /// Whether the app appears in the Dock.
     #[serde(alias = "show_dock_icon")]
     pub show_dock_icon: bool,
+    /// Whether the dashboard window floats above other windows.
+    #[serde(alias = "main_always_on_top")]
+    pub main_always_on_top: bool,
     /// Floating-widget settings.
     pub widget: WidgetSettings,
     /// Active polling interval, with a minimum of 60 seconds.
@@ -128,6 +131,7 @@ impl Default for Settings {
             notify_on_reset: true,
             launch_at_login: false,
             show_dock_icon: false,
+            main_always_on_top: false,
             widget: WidgetSettings::default(),
             poll_active_secs: 120,
             poll_idle_secs: 600,

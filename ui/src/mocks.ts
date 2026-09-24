@@ -117,6 +117,7 @@ export const MOCK_SETTINGS_STATE: SettingsState = {
     notifyOnReset: true,
     launchAtLogin: true,
     showDockIcon: false,
+    mainAlwaysOnTop: false,
     widget: { visible: true, x: null, y: null, variant: "Pill", opacity: 0.75 },
     pollActiveSecs: 120,
     pollIdleSecs: 600,
