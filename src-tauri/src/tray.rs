@@ -1,5 +1,7 @@
 //! Native menu-bar tray construction, actions, and snapshot presentation.
 
+mod bars;
+
 use std::sync::Mutex;
 
 use tauri::{
@@ -15,6 +17,7 @@ use usage_core::{ProviderUsage, UsageSnapshot, WindowKind, log_trunc};
 use crate::{
     commands::{Route, WindowTarget, quit_app_impl, refresh_now_impl, show_window_impl},
     runtime::RuntimeState,
+    settings::TrayStyle,
 };
 
 const TRAY_ID: &str = "main";
@@ -35,11 +38,23 @@ enum TrayIconState {
     Critical,
 }
 
+/// What the status item shows as its image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TrayImage {
+    /// Bundled monochrome template icon with a threshold badge.
+    Template(TrayIconState),
+    /// Rendered stacked bars of rounded weekly percentages.
+    Bars {
+        claude: Option<u8>,
+        codex: Option<u8>,
+    },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TrayPresentation {
     title: String,
     tooltip: String,
-    icon: TrayIconState,
+    image: TrayImage,
 }
 
 struct TrayState {
@@ -73,7 +88,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         current: Mutex::new(TrayPresentation {
             title: String::new(),
             tooltip: String::new(),
-            icon: TrayIconState::Normal,
+            image: TrayImage::Template(TrayIconState::Normal),
         }),
     };
     if !app.manage(state) {
@@ -120,13 +135,28 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             }
         })
         .build(app)?;
+    self::refresh(app);
     Ok(())
 }
 
-/// Updates tray text and icon only when their derived values change.
+/// Re-renders the tray from the latest snapshot, e.g. after a style change.
+pub fn refresh(app: &AppHandle) {
+    if let Some(runtime) = app.try_state::<RuntimeState>() {
+        let snapshot = std::sync::Arc::clone(&runtime.store.snapshot.borrow());
+        update(app, &snapshot);
+    }
+}
+
+/// Updates tray text and image only when their derived values change.
 pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
-    let next = presentation(snapshot);
-    let state = app.state::<TrayState>();
+    let style = app
+        .try_state::<RuntimeState>()
+        .map(|runtime| runtime.settings.snapshot().settings.tray_style)
+        .unwrap_or_default();
+    let next = presentation(snapshot, style);
+    let Some(state) = app.try_state::<TrayState>() else {
+        return;
+    };
     let Ok(mut current) = state.current.lock() else {
         warn!("tray presentation lock was poisoned");
         return;
@@ -149,18 +179,29 @@ pub fn update(app: &AppHandle, snapshot: &UsageSnapshot) {
             current.tooltip.clone_from(&next.tooltip);
         }
     }
-    if current.icon != next.icon {
-        if let Err(error) = tray.set_icon(Some(state.icon(next.icon))) {
+    if current.image != next.image {
+        let (image, template) = match next.image {
+            TrayImage::Template(icon) => (state.icon(icon), true),
+            TrayImage::Bars { claude, codex } => (
+                Image::new_owned(bars::render(claude, codex), bars::WIDTH, bars::HEIGHT),
+                false,
+            ),
+        };
+        if let Err(error) = tray
+            .set_icon_as_template(template)
+            .and_then(|()| tray.set_icon(Some(image)))
+        {
             warn!(error = %log_trunc(&error.to_string()), "could not update tray icon");
         } else {
-            current.icon = next.icon;
+            current.image = next.image;
         }
     }
 }
 
-/// Title shows each provider's weekly limit (decision D-025); the icon badge
-/// still reflects the highest window of any kind so a session warning shows.
-fn presentation(snapshot: &UsageSnapshot) -> TrayPresentation {
+/// Numbers style titles each provider's weekly limit (decision D-025) and the
+/// template badge reflects the highest window of any kind; Bars style draws
+/// the weekly limits as stacked bars with no title (decision D-026).
+fn presentation(snapshot: &UsageSnapshot, style: TrayStyle) -> TrayPresentation {
     let highest = snapshot
         .claude
         .windows
@@ -173,35 +214,60 @@ fn presentation(snapshot: &UsageSnapshot) -> TrayPresentation {
         Some(used) if used >= 75.0 => TrayIconState::Warning,
         _ => TrayIconState::Normal,
     };
-    let weekly = [
-        ("C", "Claude", weekly_used(&snapshot.claude)),
-        ("X", "Codex", weekly_used(&snapshot.codex)),
-    ]
-    .into_iter()
-    .filter_map(|(short, name, used)| used.map(|used| (short, name, used)))
-    .collect::<Vec<_>>();
-    if weekly.is_empty() {
+    if style == TrayStyle::Bars {
+        let claude = weekly_used(&snapshot.claude);
+        let codex = weekly_used(&snapshot.codex);
         return TrayPresentation {
             title: String::new(),
-            tooltip: "How Is It".to_owned(),
-            icon,
+            tooltip: weekly_tooltip(claude, codex),
+            image: TrayImage::Bars {
+                claude: claude.map(round_percent),
+                codex: codex.map(round_percent),
+            },
         };
     }
+    let weekly = [
+        ("C", weekly_used(&snapshot.claude)),
+        ("X", weekly_used(&snapshot.codex)),
+    ]
+    .into_iter()
+    .filter_map(|(short, used)| used.map(|used| (short, used)))
+    .collect::<Vec<_>>();
     let title = weekly
         .iter()
-        .map(|(short, _, used)| format!("{short} {used:.0}%"))
+        .map(|(short, used)| format!("{short} {used:.0}%"))
         .collect::<Vec<_>>()
         .join(" · ");
-    let tooltip = weekly
-        .iter()
-        .map(|(_, name, used)| format!("{name} {used:.0}%"))
-        .collect::<Vec<_>>()
-        .join(", ");
     TrayPresentation {
-        title: format!(" {title}"),
-        tooltip: format!("Weekly limits: {tooltip}"),
-        icon,
+        title: if title.is_empty() {
+            title
+        } else {
+            format!(" {title}")
+        },
+        tooltip: weekly_tooltip(weekly_used(&snapshot.claude), weekly_used(&snapshot.codex)),
+        image: TrayImage::Template(icon),
     }
+}
+
+fn weekly_tooltip(claude: Option<f64>, codex: Option<f64>) -> String {
+    let parts = [("Claude", claude), ("Codex", codex)]
+        .into_iter()
+        .filter_map(|(name, used)| used.map(|used| format!("{name} {used:.0}%")))
+        .collect::<Vec<_>>();
+    if parts.is_empty() {
+        "How Is It".to_owned()
+    } else {
+        format!("Weekly limits: {}", parts.join(", "))
+    }
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "Percent is validated to 0–100 before rounding"
+)]
+fn round_percent(used: f64) -> u8 {
+    used.round().clamp(0.0, 100.0) as u8
 }
 
 fn weekly_used(usage: &ProviderUsage) -> Option<f64> {
@@ -294,40 +360,75 @@ mod tests {
         UsageSnapshot, WindowKind,
     };
 
-    use super::{TrayIconState, presentation};
+    use super::{TrayIconState, TrayImage, presentation};
+    use crate::settings::TrayStyle;
     use WindowKind::{Session, Weekly};
 
     #[test]
     fn title_shows_each_providers_weekly_limit() {
-        let result = presentation(&snapshot(
+        let result = numbers(&snapshot(
             &[(Session, 62.0), (Weekly, 41.4)],
             &[(Weekly, 78.0)],
         ));
         assert_eq!(result.title, " C 41% · X 78%");
         assert_eq!(result.tooltip, "Weekly limits: Claude 41%, Codex 78%");
-        assert_eq!(result.icon, TrayIconState::Warning);
+        assert_eq!(result.image, TrayImage::Template(TrayIconState::Warning));
     }
 
     #[test]
     fn icon_still_reflects_the_highest_window_of_any_kind() {
-        let result = presentation(&snapshot(&[(Session, 95.0), (Weekly, 20.0)], &[]));
+        let result = numbers(&snapshot(&[(Session, 95.0), (Weekly, 20.0)], &[]));
         assert_eq!(result.title, " C 20%");
-        assert_eq!(result.icon, TrayIconState::Critical);
+        assert_eq!(result.image, TrayImage::Template(TrayIconState::Critical));
 
-        let normal = presentation(&snapshot(&[], &[(Weekly, 74.9)]));
+        let normal = numbers(&snapshot(&[], &[(Weekly, 74.9)]));
         assert_eq!(normal.title, " X 75%");
-        assert_eq!(normal.icon, TrayIconState::Normal);
+        assert_eq!(normal.image, TrayImage::Template(TrayIconState::Normal));
     }
 
     #[test]
     fn no_weekly_window_leaves_title_empty() {
-        let empty = presentation(&snapshot(&[], &[]));
+        let empty = numbers(&snapshot(&[], &[]));
         assert_eq!(empty.title, "");
-        assert_eq!(empty.icon, TrayIconState::Normal);
+        assert_eq!(empty.image, TrayImage::Template(TrayIconState::Normal));
 
-        let session_only = presentation(&snapshot(&[(Session, 80.0)], &[]));
+        let session_only = numbers(&snapshot(&[(Session, 80.0)], &[]));
         assert_eq!(session_only.title, "");
-        assert_eq!(session_only.icon, TrayIconState::Warning);
+        assert_eq!(
+            session_only.image,
+            TrayImage::Template(TrayIconState::Warning)
+        );
+    }
+
+    #[test]
+    fn bars_style_draws_weekly_bars_without_a_title() {
+        let result = presentation(
+            &snapshot(&[(Session, 99.0), (Weekly, 41.4)], &[(Weekly, 77.6)]),
+            TrayStyle::Bars,
+        );
+        assert_eq!(result.title, "");
+        assert_eq!(result.tooltip, "Weekly limits: Claude 41%, Codex 78%");
+        assert_eq!(
+            result.image,
+            TrayImage::Bars {
+                claude: Some(41),
+                codex: Some(78)
+            }
+        );
+
+        let empty = presentation(&snapshot(&[], &[]), TrayStyle::Bars);
+        assert_eq!(
+            empty.image,
+            TrayImage::Bars {
+                claude: None,
+                codex: None
+            }
+        );
+        assert_eq!(empty.tooltip, "How Is It");
+    }
+
+    fn numbers(snapshot: &UsageSnapshot) -> super::TrayPresentation {
+        presentation(snapshot, TrayStyle::Numbers)
     }
 
     fn snapshot(claude: &[(WindowKind, f64)], codex: &[(WindowKind, f64)]) -> UsageSnapshot {

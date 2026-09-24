@@ -37,6 +37,17 @@ pub enum WidgetVariant {
     Mini,
 }
 
+/// Menu-bar presentation of the weekly limits (decision D-026).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum TrayStyle {
+    /// Text title such as ` C 41% · X 78%` beside the template icon.
+    #[default]
+    Numbers,
+    /// Two stacked colored bars drawn as the icon: Claude on top, Codex below.
+    Bars,
+}
+
 /// Persisted floating-widget presentation and position.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -107,6 +118,9 @@ pub struct Settings {
     /// Whether the dashboard window floats above other windows.
     #[serde(alias = "main_always_on_top")]
     pub main_always_on_top: bool,
+    /// Menu-bar presentation style.
+    #[serde(alias = "tray_style")]
+    pub tray_style: TrayStyle,
     /// Floating-widget settings.
     pub widget: WidgetSettings,
     /// Active polling interval, with a minimum of 60 seconds.
@@ -132,6 +146,7 @@ impl Default for Settings {
             launch_at_login: false,
             show_dock_icon: false,
             main_always_on_top: false,
+            tray_style: TrayStyle::Numbers,
             widget: WidgetSettings::default(),
             poll_active_secs: 120,
             poll_idle_secs: 600,
