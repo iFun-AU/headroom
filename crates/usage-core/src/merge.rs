@@ -137,7 +137,13 @@ pub fn ingest_status(
 #[must_use]
 pub fn derive_provider_usage(state: &State, provider: Provider, now: UnixSeconds) -> ProviderUsage {
     let mut configured = provider_sources(state, provider);
-    configured.sort_by_key(|(source, _)| (source.limit_priority(), **source));
+    configured.sort_by_key(|(source, state)| {
+        (
+            source.limit_priority(),
+            Reverse(state.observed_at),
+            **source,
+        )
+    });
 
     let authoritative = select_authoritative(&configured, now);
     let highest_priority = configured
@@ -275,6 +281,22 @@ fn derive_windows(
             apply_reset(refined, now)
         })
         .collect::<Vec<_>>();
+    // The status line only carries the account-wide windows. Keep a separately
+    // reported Fable window while it is fresh, even when a bridge update takes
+    // over the account-wide limits. Never promote missing global windows here.
+    if !windows
+        .iter()
+        .any(|window| window.kind == WindowKind::Fable)
+        && let Some(fable) = configured
+            .iter()
+            .filter_map(|(_, state)| state.windows.get(&WindowKind::Fable))
+            .filter(|window| is_fresh(window.observed_at, now))
+            .max_by_key(|window| window.observed_at)
+            .cloned()
+            .and_then(|window| apply_reset(window, now))
+    {
+        windows.push(fable);
+    }
     windows.sort_by_key(|window| window.kind);
     windows
 }

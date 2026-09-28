@@ -8,7 +8,7 @@ import { SettingsGroup, SettingsRow } from "../../components/SettingsGroup";
 import { StatusChip } from "../../components/StatusBadge";
 import { getAppVersion, isTauriRuntime, revealLogs } from "../../ipc";
 
-const SOURCE_NAMES: Readonly<Record<SourceKind, string>> = { codexAppServer: "Codex app-server", codexRollout: "Codex session files", claudeStatusline: "Claude status line", claudeOAuth: "Claude OAuth", claudeLocalLogs: "Claude local logs" };
+const SOURCE_NAMES: Readonly<Record<SourceKind, string>> = { codexAppServer: "Codex app-server", codexRollout: "Codex session files", claudeStatusline: "Claude status line", claudeCli: "Claude Code manual refresh", claudeOAuth: "Claude OAuth", claudeLocalLogs: "Claude local logs" };
 
 function sourceStatus(source: SourceHealth): { readonly tone: "ok" | "warning" | "neutral"; readonly text: string } {
   switch (source.status.state) {

@@ -252,6 +252,9 @@ impl UsageStore {
 
     fn ingest_event(&mut self, event: SourceEvent) -> bool {
         match event {
+            SourceEvent::ClearSource { provider, source } => {
+                self.state.remove(&(provider, source)).is_some()
+            }
             SourceEvent::Reading(reading) => ingest_reading(&mut self.state, reading),
             SourceEvent::Tokens(events) => self.ingest_tokens(events),
             SourceEvent::Daily(update) => self.history.ingest_daily(update),

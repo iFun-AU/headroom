@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import type { Route } from "../bindings/Route";
-import { collapseToWidget, isTauriRuntime, refreshNow } from "../ipc";
+import { collapseToWidget, commandErrorMessage, isTauriRuntime, refreshNow } from "../ipc";
 import { useSettings } from "../hooks/useSettings";
 import { UpdatedAgo } from "./Countdown";
 import { Icon } from "./Icon";
@@ -21,6 +21,7 @@ export function MainToolbar({
   readonly navigate: (route: Route) => void;
 }) {
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const settingsState = useSettings();
   const settings = settingsState.state?.settings;
   const pinned = settings?.mainAlwaysOnTop === true;
@@ -31,7 +32,8 @@ export function MainToolbar({
   const requestRefresh = () => {
     if (!isTauriRuntime()) return;
     setRefreshing(true);
-    void refreshNow().catch(() => undefined).finally(() => { setRefreshing(false); });
+    setRefreshError(null);
+    void refreshNow().catch((error: unknown) => { setRefreshError(commandErrorMessage(error)); }).finally(() => { setRefreshing(false); });
   };
 
   return (
@@ -50,12 +52,12 @@ export function MainToolbar({
         ))}
       </nav>
       <div className="main-toolbar__actions">
-        <span className="num"><UpdatedAgo timestamp={updatedAt} /></span>
+        <span className="num" role={refreshError === null ? undefined : "status"} title={refreshError ?? undefined} aria-label={refreshError ?? undefined}>{refreshError === null ? <UpdatedAgo timestamp={updatedAt} /> : "Refresh failed"}</span>
         <span className="toolbar-button-group ctl">
           <button aria-label="Keep dashboard on top" aria-pressed={pinned} title={pinned ? "Unpin from top" : "Keep on top"} onClick={togglePin} disabled={settings === undefined || settingsState.saving}>
             <Icon name="pin" size={15} />
           </button>
-          <button className={refreshing ? "is-refreshing" : undefined} aria-label="Refresh usage" onClick={requestRefresh} disabled={refreshing}>
+          <button className={refreshing ? "is-refreshing" : undefined} aria-label="Refresh usage" title={refreshError ?? "Refresh usage"} onClick={requestRefresh} disabled={refreshing}>
             <Icon name="refresh" size={15} />
           </button>
           <button aria-label="Collapse to floating widget" onClick={() => { if (isTauriRuntime()) void collapseToWidget().catch(() => undefined); }}>

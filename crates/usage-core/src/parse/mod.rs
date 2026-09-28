@@ -1,5 +1,7 @@
 //! Lenient provider DTO parsing.
 
+mod claude_cli;
+mod claude_cli_reset;
 mod claude_log;
 mod claude_oauth;
 mod claude_statusline;
@@ -9,6 +11,7 @@ mod codex_rollout;
 use chrono::DateTime;
 use thiserror::Error;
 
+pub use claude_cli::{ClaudeCliError, parse_claude_cli_usage};
 pub use claude_log::{
     ClaudeLogRecord, ClaudeSession, parse_claude_log_line, parse_claude_log_record,
 };

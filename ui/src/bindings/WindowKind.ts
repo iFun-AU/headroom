@@ -3,7 +3,7 @@
 /**
  * Classified limit window. Classification uses duration rather than response position.
  */
-export type WindowKind = { "kind": "session" } | { "kind": "weekly" } | { "kind": "other",
+export type WindowKind = { "kind": "session" } | { "kind": "weekly" } | { "kind": "fable" } | { "kind": "other",
 /**
  * The reported duration in minutes.
  */

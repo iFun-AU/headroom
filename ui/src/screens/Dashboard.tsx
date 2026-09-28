@@ -3,7 +3,6 @@
  * @description Overview and provider detail routes backed by live usage and scoped history.
  */
 import type { History } from "../bindings/History";
-import type { BridgeStatus } from "../bindings/BridgeStatus";
 import type { LimitWindow } from "../bindings/LimitWindow";
 import type { Provider } from "../bindings/Provider";
 import type { ProviderUsage } from "../bindings/ProviderUsage";
@@ -20,7 +19,6 @@ import { ServiceBadge } from "../components/Icon";
 import { StatTile } from "../components/StatTile";
 import { UsageValue } from "../components/StatusBadge";
 import { useHistory } from "../hooks/useHistory";
-import { useBridgeStatus } from "../hooks/useBridgeStatus";
 import { isTauriRuntime, refreshNow } from "../ipc";
 
 interface DashboardProps {
@@ -29,7 +27,6 @@ interface DashboardProps {
   readonly navigate: (route: Route) => void;
   readonly histories?: Partial<Readonly<Record<Provider, History>>>;
   readonly error?: string | null;
-  readonly bridgeStatus?: BridgeStatus;
 }
 
 function providerName(provider: Provider): string {
@@ -42,7 +39,7 @@ function displayPlan(provider: Provider, plan: string | null): string | null {
   return plan.startsWith("ChatGPT ") ? plan : `ChatGPT ${plan}`;
 }
 
-function windowOf(usage: ProviderUsage, wanted: "session" | "weekly"): LimitWindow | undefined {
+function windowOf(usage: ProviderUsage, wanted: "session" | "weekly" | "fable"): LimitWindow | undefined {
   return usage.windows.find((window) => window.kind.kind === wanted);
 }
 
@@ -75,7 +72,7 @@ function DetailLimit({ window, provider, label }: { readonly window: LimitWindow
   return (
     <div className="detail-limit">
       <div><span>{label} · <Countdown resetsAt={window.resetsAt} resetPending={window.resetPending} /></span><UsageValue percent={window.used} provider={provider} compact /></div>
-      <NeonBar percent={window.used} accent={provider} label={label === "Session" ? "5-hour limit" : "weekly limit"} resetsAt={window.resetsAt} resetPending={window.resetPending} height={8} showValue={false} reflect={false} />
+      <NeonBar percent={window.used} accent={provider} label={label === "Session" ? "5-hour limit" : label === "Fable" ? "Fable weekly limit" : "weekly limit"} resetsAt={window.resetsAt} resetPending={window.resetPending} height={8} showValue={false} reflect={false} />
     </div>
   );
 }
@@ -83,9 +80,10 @@ function DetailLimit({ window, provider, label }: { readonly window: LimitWindow
 function DetailHeader({ usage }: { readonly usage: ProviderUsage }) {
   const session = windowOf(usage, "session");
   const weekly = windowOf(usage, "weekly");
+  const fable = windowOf(usage, "fable");
   const date = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" }).format(new Date());
   return (
-    <header className="detail-header" data-provider={usage.provider}>
+    <header className="detail-header" data-provider={usage.provider} data-has-fable={fable !== undefined}>
       <ServiceBadge provider={usage.provider} size="large" />
       <div className="detail-header__identity">
         <span><strong>{providerName(usage.provider)}</strong>{displayPlan(usage.provider, usage.plan) === null ? null : <small className="ctl">{displayPlan(usage.provider, usage.plan)}</small>}</span>
@@ -94,6 +92,7 @@ function DetailHeader({ usage }: { readonly usage: ProviderUsage }) {
       <div className="detail-header__limits">
         {session === undefined ? null : <DetailLimit window={session} provider={usage.provider} label="Session" />}
         {weekly === undefined ? null : <DetailLimit window={weekly} provider={usage.provider} label="Weekly" />}
+        {fable === undefined ? null : <DetailLimit window={fable} provider={usage.provider} label="Fable" />}
       </div>
     </header>
   );
@@ -156,8 +155,7 @@ function DetailView({ usage, history, error }: { readonly usage: ProviderUsage; 
   );
 }
 
-export function Dashboard({ route, snapshot, navigate, histories, error = null, bridgeStatus }: DashboardProps) {
-  const bridge = useBridgeStatus(bridgeStatus);
+export function Dashboard({ route, snapshot, navigate, histories, error = null }: DashboardProps) {
   const claudeState = useHistory("claude", snapshot?.claude.lastUpdated ?? null);
   const codexState = useHistory("codex", snapshot?.codex.lastUpdated ?? null);
   const claudeHistory = histories?.claude ?? claudeState.history;
@@ -175,7 +173,7 @@ export function Dashboard({ route, snapshot, navigate, histories, error = null, 
       {error === null ? null : <div className="dashboard-error" role="status">{error}</div>}
       {route === "Overview" ? (
         <div className="overview-grid">
-          <ProviderCard usage={snapshot?.claude ?? null} provider="claude" sparkline={todayValues(claudeHistory)} peakLabel={peakLabel(claudeHistory)} onAction={(action) => { cardAction("claude", action); }} bridgeStatus={bridge.status} />
+          <ProviderCard usage={snapshot?.claude ?? null} provider="claude" sparkline={todayValues(claudeHistory)} peakLabel={peakLabel(claudeHistory)} onAction={(action) => { cardAction("claude", action); }} />
           <ProviderCard usage={snapshot?.codex ?? null} provider="codex" sparkline={todayValues(codexHistory)} peakLabel={peakLabel(codexHistory)} onAction={(action) => { cardAction("codex", action); }} />
         </div>
       ) : snapshot === null ? <HistoryLoading /> : (

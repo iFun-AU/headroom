@@ -70,9 +70,9 @@ fi
 
 step "Building $target"
 if [ "$oauth" -eq 1 ]; then
-  cargo tauri build --target "$target" --features claude-oauth
+  cargo tauri build --target "$target" --bundles app --features claude-oauth
 else
-  cargo tauri build --target "$target"
+  cargo tauri build --target "$target" --bundles app
 fi
 
 step "Signing (ad-hoc)"

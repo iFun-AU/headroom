@@ -229,6 +229,7 @@ fn window_label(kind: WindowKind) -> String {
     match kind {
         WindowKind::Session => "5-hour".to_owned(),
         WindowKind::Weekly => "weekly".to_owned(),
+        WindowKind::Fable => "Fable weekly".to_owned(),
         WindowKind::Other { minutes } => format!("{minutes}-minute"),
     }
 }

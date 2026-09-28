@@ -3,4 +3,4 @@
 /**
  * A mechanism that provides usage information.
  */
-export type SourceKind = "codexAppServer" | "codexRollout" | "claudeStatusline" | "claudeOAuth" | "claudeLocalLogs";
+export type SourceKind = "codexAppServer" | "codexRollout" | "claudeStatusline" | "claudeCli" | "claudeOAuth" | "claudeLocalLogs";

@@ -14,6 +14,7 @@ pub struct DiscoveryOptions {
     candidates: Vec<PathBuf>,
     shell_program: PathBuf,
     shell_timeout: Duration,
+    shell_command: &'static str,
 }
 
 impl DiscoveryOptions {
@@ -30,6 +31,24 @@ impl DiscoveryOptions {
             ],
             shell_program: PathBuf::from("/bin/zsh"),
             shell_timeout: Duration::from_secs(3),
+            shell_command: "command -v codex",
+        }
+    }
+
+    /// Discovers Claude Code using the same bounded GUI-safe lookup mechanism.
+    #[must_use]
+    pub fn claude(home: &std::path::Path) -> Self {
+        Self {
+            override_path: None,
+            candidates: vec![
+                home.join(".local/bin/claude"),
+                PathBuf::from("/opt/homebrew/bin/claude"),
+                PathBuf::from("/usr/local/bin/claude"),
+                home.join(".npm-global/bin/claude"),
+            ],
+            shell_program: PathBuf::from("/bin/zsh"),
+            shell_timeout: Duration::from_secs(3),
+            shell_command: "command -v claude",
         }
     }
 
@@ -47,6 +66,7 @@ impl DiscoveryOptions {
             candidates,
             shell_program,
             shell_timeout,
+            shell_command: "command -v codex",
         }
     }
 }
@@ -111,7 +131,7 @@ async fn is_executable(path: &std::path::Path) -> Result<bool, DiscoveryError> {
 
 async fn shell_lookup(options: &DiscoveryOptions) -> Result<Option<PathBuf>, DiscoveryError> {
     let mut child = Command::new(&options.shell_program)
-        .args(["-lc", "command -v codex"])
+        .args(["-lc", options.shell_command])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())

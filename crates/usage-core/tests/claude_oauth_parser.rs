@@ -168,3 +168,36 @@ fn unexpected_spend_shapes_drop_only_the_credits() {
         "currency codes are upper-cased"
     );
 }
+
+#[test]
+fn fable_uses_the_active_named_weekly_scope() {
+    let input = r#"{"five_hour":{"utilization":2},"seven_day":{"utilization":62},"limits":[{"kind":"weekly_scoped","percent":80,"resets_at":"2026-09-30T17:00:00Z","is_active":true,"scope":{"model":{"display_name":"Fable"}}},{"kind":"weekly_scoped","percent":90,"is_active":true,"scope":{"model":{"display_name":"Sonnet"}}}]}"#;
+    let reading = parse_claude_oauth_usage(input, OBSERVED, None)
+        .expect("valid response")
+        .expect("windows");
+    assert_eq!(
+        kinds(&reading),
+        [WindowKind::Session, WindowKind::Weekly, WindowKind::Fable]
+    );
+    assert!((reading.windows[2].used.get() - 80.0).abs() < f64::EPSILON);
+    assert!(reading.windows[2].resets_at.is_some());
+}
+
+#[test]
+fn malformed_or_inactive_scopes_preserve_general_limits() {
+    for limits in [
+        r#""unexpected""#,
+        "[null]",
+        r#"[{"kind":"weekly_scoped","percent":80,"is_active":false,"scope":{"model":{"display_name":"Fable"}}}]"#,
+        r#"[{"kind":"weekly_scoped","percent":80,"is_active":true,"scope":{"surface":{"display_name":"Fable"}}}]"#,
+        r#"[{"kind":"weekly_scoped","percent":150,"is_active":true,"scope":{"model":{"display_name":"Fable"}}}]"#,
+        r#"[{"kind":"weekly_scoped","percent":"80","is_active":true,"scope":{"model":{"display_name":"Fable"}}}]"#,
+        r#"[{"kind":"weekly_scoped","percent":80,"is_active":true,"scope":{"model":{"display_name":"Fable"}}},{"kind":"weekly_scoped","percent":60,"is_active":true,"scope":{"model":{"display_name":"Fable"}}}]"#,
+    ] {
+        let input = format!(r#"{{"seven_day":{{"utilization":62}},"limits":{limits}}}"#);
+        let reading = parse_claude_oauth_usage(&input, OBSERVED, None)
+            .expect("invalid model scope must not fail account limits")
+            .expect("weekly limit");
+        assert_eq!(kinds(&reading), [WindowKind::Weekly]);
+    }
+}

@@ -47,7 +47,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
   Keep Claude Code activity confined to that project for more than ten minutes after the user bridge was installed.
 
-  **Expected:** Headroom keeps the last good limits, changes bridge effectiveness to `LikelyOverridden`, dims the affected session value, and explains that project or managed settings may take precedence.
+  **Expected:** Headroom keeps the last good limits and changes bridge effectiveness to `LikelyOverridden` in Settings. The dashboard renders all available usage windows; bridge effectiveness does not override their status or hide weekly/Fable readings (D-032).
 
 - [ ] Quit Claude Code → the Claude bars show "Updated Xm ago" and turn Stale after 15 min.
 
@@ -161,7 +161,7 @@ The ten checkbox lines below are copied unchanged and remain in contract order.
 
 ## 4. Native look and macOS behavior
 
-- [ ] Compare the installed app over a real desktop with `docs/design/screenshots/`: dashboard 720×520, popover 340×420, and Pill/Stack/Mini widgets at 280×72, 160×180, and 200×24. Expected: real Liquid Glass, radii, neon layers, spacing, threshold text/icons, and light/dark appearance match the approved artboards without fake wallpaper or chrome.
+- [ ] Compare the installed app over a real desktop with `docs/design/screenshots/`: dashboard 720×520, popover 340×420, and Pill/Stack/Mini widgets at 320×80, 180×220, and 280×32 (expanded for Fable in D-032). Expected: real Liquid Glass, radii, neon layers, spacing, threshold text/icons, and light/dark appearance remain consistent with the artboards without fake wallpaper or chrome.
 - [ ] Toggle **System Settings → Accessibility → Display → Reduce transparency**, reopen each surface, and toggle it back. Expected: WKWebView honors the system preference with opaque tokenized surfaces; text remains readable and no glass blur remains. This is the native completion of D-015.
 - [ ] Toggle Reduce Motion and exercise keyboard navigation in onboarding, Settings, popover, and widget. Expected: entrance/pulse animation is removed, focus order is logical and visible, every threshold remains understandable without color, and no control is clipped.
 - [ ] Exercise the tray and native window lifecycle: left-click toggles/positions the popover, right-click exposes the native menu, blur hides the popover, closing the main window hides rather than quits, each widget variant drags/snaps inside its fixed bounds across available monitors, Dock visibility changes activation policy, and launch-at-login converges only when changed.
@@ -204,3 +204,25 @@ Do this only if the owner wants a distributable build and supplies/manages their
   ```
 
   **Expected:** Developer ID signature validation passes, the notarization submission is `Accepted`, the ticket staples/validates, and Gatekeeper identifies the app as notarized Developer ID software on another Mac.
+
+
+## Manual Claude refresh local acceptance (D-031, 2026-09-28)
+
+The production CLI capture was exercised against installed Claude Code 2.1.281 and successfully returned session/weekly percentages with reset times. This is separate from native UI acceptance below.
+
+- [ ] Quit any running Headroom copy and open the new local test app. In **Settings → Accounts**, leave **Claude usage API** off and click **Refresh with Claude Code**. Expect a busy button followed by **Claude usage updated**, no Terminal.app window, and current Claude limits on the dashboard. Compare with Claude's own usage display.
+- [ ] Wait at least 30 seconds, then use the dashboard/popover/tray Refresh. Expect the same CLI-backed refresh when the usage API is off. Opening a window alone must not start Claude.
+- [ ] On a provider rate limit or offline failure, expect an actionable error and unchanged last-good timestamps. Rate-limit retries are blocked for five minutes within the running app.
+- [ ] With a refresh in progress, quit Headroom. Confirm that its temporary Claude process exits, while any separately started Claude Code sessions remain running.
+- [ ] If using a separate Claude profile, select its configuration-directory override and confirm that the prior manual reading disappears. Do not set the default directory explicitly to work around a sign-in problem: this changes Claude's auth-profile selection.
+
+This path requires Claude Code installed and signed in once; browser-only sign-in and automatic background CLI polling are not implemented.
+
+## Fable and dashboard acceptance (D-032, 2026-09-29)
+
+The production CLI capture returned session 2%, weekly 62%, and Fable 80%, each with a reset timestamp. These are observations from this check, not fixed expected values. Browser previews use synthetic data.
+
+- [ ] Quit the prior Headroom copy, open `target/test-builds/fable-usage-20260929/Headroom.app`, and refresh Claude. Expect Session, Weekly, and Fable on the overview card and Claude detail page, without the old Terminal only pill or bridge warning.
+- [ ] Select Pill, Stack, and Mini widgets. Expect a separately labeled Fable allowance in each; Mini reveals the percentage on hover. The explicit credits-only setting still hides limit rows.
+- [ ] Compare percentages and resets with Claude's own `/usage`. If Fable is absent from the provider response it must be omitted, not displayed as zero or inferred from the account-wide limit.
+- [ ] Receive a new bridge update after manual refresh. Expect the fresh Fable row to remain with its original source timestamp; it expires after 15 minutes without a new model-specific observation.

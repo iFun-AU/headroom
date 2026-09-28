@@ -138,7 +138,6 @@ function StatesScreen() {
             sparkline={state.usage === null || state.usage.windows.length === 0 ? [] : MOCK_SPARKLINES[state.provider]}
             peakLabel={state.provider === "claude" ? "1 PM" : "2 PM"}
             showThresholdNotice={state.notice ?? false}
-            bridgeStatus={state.bridgeStatus ?? null}
           />
         </div>
       ))}
@@ -159,6 +158,11 @@ const WEEKLY_ONLY_CODEX_SNAPSHOT = {
 const NO_CODEX_CREDITS_SNAPSHOT = {
   ...MOCK_SNAPSHOT,
   codex: { ...MOCK_SNAPSHOT.codex, credits: MOCK_SNAPSHOT.codex.credits === null ? null : { ...MOCK_SNAPSHOT.codex.credits, enabled: false } },
+};
+
+const FABLE_LIMIT_SNAPSHOT = {
+  ...MOCK_SNAPSHOT,
+  claude: { ...MOCK_SNAPSHOT.claude, windows: MOCK_SNAPSHOT.claude.windows.map((window) => window.kind.kind === "fable" ? { ...window, used: 100 } : window) },
 };
 
 function WidgetGallery() {
@@ -183,6 +187,9 @@ function WidgetGallery() {
       <Widget snapshot={NO_CODEX_CREDITS_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" creditsOverride="Only" />
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" creditsOverride="WithLimits" forceHover />
       <Widget snapshot={MOCK_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" creditsOverride="Only" />
+      <Widget snapshot={FABLE_LIMIT_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Pill" creditsOverride="WithLimits" />
+      <Widget snapshot={FABLE_LIMIT_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Stack" creditsOverride="WithLimits" />
+      <Widget snapshot={FABLE_LIMIT_SNAPSHOT} fixtureSettings={MOCK_SETTINGS_STATE} variantOverride="Mini" creditsOverride="WithLimits" forceHover />
     </main>
   );
 }
@@ -233,7 +240,7 @@ export default function DebugRoutes() {
       return <AccessibilityScreen />;
     default:
       if (route === "Overview" || route === "Claude" || route === "Codex") {
-        return <Dashboard route={route} snapshot={MOCK_SNAPSHOT} navigate={navigate} histories={MOCK_HISTORIES} bridgeStatus={MOCK_BRIDGE_STATUS} />;
+        return <Dashboard route={route} snapshot={MOCK_SNAPSHOT} navigate={navigate} histories={MOCK_HISTORIES} />;
       }
       return <DemoScreen />;
   }

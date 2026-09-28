@@ -20,7 +20,7 @@ function sourceFor(provider: Provider): SourceKind {
   return provider === "claude" ? "claudeStatusline" : "codexAppServer";
 }
 
-function limitWindow(provider: Provider, kind: "session" | "weekly", used: number, remainingSeconds: number): LimitWindow {
+function limitWindow(provider: Provider, kind: "session" | "weekly" | "fable", used: number, remainingSeconds: number): LimitWindow {
   return {
     kind: { kind },
     used,
@@ -52,6 +52,7 @@ export function mockProviderUsage(
     windows: [
       limitWindow(provider, "session", session, provider === "claude" ? 8_040 : 13_260),
       limitWindow(provider, "weekly", weekly, provider === "claude" ? 411_600 : 421_200),
+      ...(provider === "claude" ? [limitWindow(provider, "fable", 23, 411_600)] : []),
     ],
     status,
     authoritativeSource: source,
@@ -172,7 +173,7 @@ function withWindows(usage: ProviderUsage, updates: Readonly<Partial<Record<"ses
   return {
     ...usage,
     windows: usage.windows.map((window) => {
-      if (window.kind.kind === "other") return window;
+      if (window.kind.kind !== "session" && window.kind.kind !== "weekly") return window;
       return { ...window, ...updates[window.kind.kind] };
     }),
   };
@@ -203,7 +204,7 @@ export const MOCK_CARD_STATES: readonly {
   { title: "Single-window plan", provider: "codex", usage: { ...singleWindow, windows: singleWindow.windows.filter((window) => window.kind.kind === "weekly") } },
   { title: "Reset pending", provider: "claude", usage: withWindows(mockProviderUsage("claude"), { session: { used: 0, resetsAt: NOW - 30, resetPending: true } }) },
   { title: "Bridge likely overridden", provider: "claude", usage: mockProviderUsage("claude"), bridgeStatus: MOCK_OVERRIDDEN_BRIDGE },
-  { title: "Bridge terminal only", provider: "claude", usage: { ...mockProviderUsage("claude"), windows: [] }, bridgeStatus: MOCK_HEADLESS_BRIDGE },
+  { title: "Manual limits with idle bridge", provider: "claude", usage: { ...mockProviderUsage("claude"), authoritativeSource: "claudeCli" }, bridgeStatus: MOCK_HEADLESS_BRIDGE },
   { title: "Unsupported", provider: "codex", usage: { ...mockProviderUsage("codex"), windows: [], status: { state: "unsupported", reason: "This Codex version doesn’t support reading rate limits. Update Codex CLI, then retry." } } },
   { title: "Auth expired", provider: "claude", usage: { ...mockProviderUsage("claude"), windows: [], status: { state: "authExpired", hint: "Open Claude Code to refresh sign-in." } } },
 ];

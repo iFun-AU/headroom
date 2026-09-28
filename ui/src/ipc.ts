@@ -49,6 +49,14 @@ export const getHistory = (provider: Provider): Promise<History> =>
 
 export const refreshNow = (): Promise<null> => invoke<null>("refresh_now");
 
+export const refreshClaudeCli = (): Promise<null> => invoke<null>("refresh_claude_cli");
+
+/** Extracts the backend's public message without exposing provider output. */
+export function commandErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") return error.message;
+  return "Usage refresh failed. Try again shortly.";
+}
+
 export const getSettings = (): Promise<SettingsState> =>
   invoke<SettingsState>("get_settings");
 

@@ -20,6 +20,8 @@ struct UsageDto {
     /// Kept untyped: it is undocumented, so a shape change must drop only the
     /// credits and never the limit windows.
     spend: Option<Value>,
+    /// Model-scoped limits are self-describing; malformed entries are ignored.
+    limits: Option<Value>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -31,11 +33,11 @@ struct WindowDto {
 
 /// Parses a Claude OAuth usage response (verified shape: decision D-024).
 ///
-/// Only `five_hour` (Session), `seven_day` (Weekly) and the extra-usage
-/// `spend` object (credits, decision D-030) are mapped; every other key is
-/// ignored. `utilization` is a 0–100 percentage and `resets_at`
+/// Maps `five_hour` (Session), `seven_day` (Weekly), an active Fable
+/// `weekly_scoped` entry in `limits`, and the extra-usage `spend` object.
+/// Unknown model entries are ignored. `utilization` is a 0–100 percentage and `resets_at`
 /// may be an RFC 3339 string, an epoch number, or null. A response without
-/// either window produces no reading.
+/// any supported window produces no reading.
 ///
 /// # Errors
 ///
@@ -51,7 +53,7 @@ pub fn parse_claude_oauth_usage(
         .spend
         .as_ref()
         .and_then(|spend| credits_from_spend(spend, observed_at));
-    let windows = [
+    let mut windows = [
         (dto.five_hour, WindowKind::Session),
         (dto.seven_day, WindowKind::Weekly),
     ]
@@ -71,6 +73,14 @@ pub fn parse_claude_oauth_usage(
     })
     .collect::<Result<Vec<_>>>()?;
 
+    if let Some(window) = dto
+        .limits
+        .as_ref()
+        .and_then(|limits| fable_window(limits, observed_at))
+    {
+        windows.push(window);
+    }
+
     if windows.is_empty() {
         return Ok(None);
     }
@@ -84,6 +94,34 @@ pub fn parse_claude_oauth_usage(
         partial: false,
         credits,
     }))
+}
+
+fn fable_window(limits: &Value, observed_at: UnixSeconds) -> Option<LimitWindow> {
+    let mut matches = limits.as_array()?.iter().filter(|entry| {
+        entry.get("kind").and_then(Value::as_str) == Some("weekly_scoped")
+            && entry.get("is_active").and_then(Value::as_bool) == Some(true)
+            && entry
+                .pointer("/scope/model/display_name")
+                .and_then(Value::as_str)
+                .is_some_and(|name| name.eq_ignore_ascii_case("Fable"))
+    });
+    let entry = matches.next()?;
+    // Multiple active scopes may have different semantics; never guess which applies.
+    if matches.next().is_some() {
+        return None;
+    }
+    let percent = entry.get("percent")?.as_f64()?;
+    if !percent.is_finite() || !(0.0..=100.0).contains(&percent) {
+        return None;
+    }
+    Some(LimitWindow {
+        kind: WindowKind::Fable,
+        used: Percent::new(percent).ok()?,
+        resets_at: entry.get("resets_at").and_then(reset_time),
+        reset_pending: false,
+        source: SourceKind::ClaudeOAuth,
+        observed_at,
+    })
 }
 
 /// Reads `spend: {enabled, used, limit}`, where each amount is

@@ -38,8 +38,8 @@
       },
       {
         "label": "widget",
-        "width": 280,
-        "height": 72,
+        "width": 320,
+        "height": 80,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,

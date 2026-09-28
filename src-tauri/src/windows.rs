@@ -315,9 +315,9 @@ async fn settle_widget_position(app: &AppHandle, settings: &SettingsHandle) {
 
 fn widget_size(variant: WidgetVariant) -> (f64, f64) {
     match variant {
-        WidgetVariant::Pill => (280.0, 72.0),
-        WidgetVariant::Stack => (160.0, 180.0),
-        WidgetVariant::Mini => (200.0, 24.0),
+        WidgetVariant::Pill => (320.0, 80.0),
+        WidgetVariant::Stack => (180.0, 220.0),
+        WidgetVariant::Mini => (280.0, 32.0),
     }
 }
 
@@ -400,9 +400,9 @@ mod tests {
 
     #[test]
     fn widget_variants_have_exact_contract_sizes() {
-        assert_eq!(widget_size(WidgetVariant::Pill), (280.0, 72.0));
-        assert_eq!(widget_size(WidgetVariant::Stack), (160.0, 180.0));
-        assert_eq!(widget_size(WidgetVariant::Mini), (200.0, 24.0));
+        assert_eq!(widget_size(WidgetVariant::Pill), (320.0, 80.0));
+        assert_eq!(widget_size(WidgetVariant::Stack), (180.0, 220.0));
+        assert_eq!(widget_size(WidgetVariant::Mini), (280.0, 32.0));
     }
 
     #[test]
@@ -432,11 +432,11 @@ mod tests {
             width: 1_512.0,
             height: 920.0,
         };
-        let size = LogicalSize::new(280.0, 72.0);
+        let size = LogicalSize::new(320.0, 80.0);
         // Was on an external display to the right that is now disconnected.
         assert_eq!(
             recover_position(LogicalPosition::new(2_600.0, 400.0), size, &[laptop]),
-            Some(LogicalPosition::new(1_220.0, 400.0))
+            Some(LogicalPosition::new(1_180.0, 400.0))
         );
         // Above and left of every display.
         assert_eq!(
@@ -461,7 +461,7 @@ mod tests {
                 height: 1_440.0,
             },
         ];
-        let size = LogicalSize::new(280.0, 72.0);
+        let size = LogicalSize::new(320.0, 80.0);
         assert_eq!(
             recover_position(LogicalPosition::new(2_600.0, 400.0), size, &frames),
             None

@@ -4,6 +4,8 @@
 pub mod bridge_install;
 /// Native source for persisted bridge rate limits.
 pub mod bridge_source;
+/// User-requested, bounded Claude Code terminal usage probes.
+pub mod cli;
 /// Behavioral bridge effectiveness evidence.
 pub mod effectiveness;
 /// Recursive Claude Code local-history source.

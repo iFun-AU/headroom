@@ -18,6 +18,7 @@ use usage_core::{Alert, log_trunc};
 use usage_sources::{
     claude::{
         bridge_install::{BridgeInstallConfig, BridgeInstaller},
+        cli::{CliRefresh, CliRefreshActor},
         effectiveness::EffectivenessHandle,
     },
     codex::{app_server::AppServerControl, discover::DiscoveryOptions},
@@ -86,6 +87,22 @@ impl RuntimeRoots {
         )
     }
 
+    /// Discovers the Claude executable independently of configuration-directory overrides.
+    #[must_use]
+    pub fn claude_discovery(&self) -> DiscoveryOptions {
+        DiscoveryOptions::claude(&self.home)
+    }
+
+    /// Preserves the distinction between Claude's default and explicitly selected profile.
+    #[must_use]
+    pub fn claude_config_override(&self, settings: &Settings) -> Option<PathBuf> {
+        settings
+            .claude_dir
+            .as_deref()
+            .map(PathBuf::from)
+            .or_else(|| self.environment.claude_dir.clone())
+    }
+
     /// Builds the bridge installer for current path settings.
     #[must_use]
     pub fn bridge_installer(&self, settings: &Settings) -> BridgeInstaller {
@@ -107,6 +124,10 @@ impl RuntimeRoots {
 
 /// Managed state used by commands, tray actions, and lifecycle handlers.
 pub struct RuntimeState {
+    /// Manual Claude terminal probe client; its actor owns process cleanup.
+    pub claude_cli: CliRefresh,
+    /// Source updates emitted by explicit user-requested probes.
+    pub source_events: tokio::sync::mpsc::Sender<usage_sources::SourceEvent>,
     /// Usage snapshot/history command client.
     pub store: StoreClient,
     /// Adaptive polling scheduler.
@@ -167,11 +188,12 @@ impl RuntimeState {
             warn!(%error, "could not apply initial alert settings");
         }
         let (app_server_tx, app_server) = watch::channel(None);
+        let (claude_cli, claude_cli_actor) = CliRefresh::channel();
         let source_supervisor = SourceSupervisor::new(
             roots.clone(),
             settings.subscribe(),
             effectiveness.clone(),
-            events,
+            events.clone(),
             scheduler.clone(),
             app_server_tx,
             store.snapshot.clone(),
@@ -189,6 +211,7 @@ impl RuntimeState {
             store_actor,
             effectiveness_actor,
             source_supervisor,
+            claude_cli_actor,
             store.snapshot.clone(),
             alerts,
             settings.subscribe(),
@@ -202,6 +225,8 @@ impl RuntimeState {
         shutdown.set_task(supervisor);
 
         Self {
+            claude_cli,
+            source_events: events,
             store,
             scheduler,
             settings,
@@ -308,6 +333,7 @@ fn spawn_supervisor(
     store_actor: UsageStore,
     effectiveness_actor: usage_sources::claude::effectiveness::EffectivenessActor,
     sources: SourceSupervisor,
+    claude_cli: CliRefreshActor,
     snapshots: watch::Receiver<Arc<usage_core::UsageSnapshot>>,
     alerts: tokio::sync::mpsc::Receiver<Alert>,
     settings_updates: watch::Receiver<SettingsState>,
@@ -330,6 +356,7 @@ fn spawn_supervisor(
             tasks.spawn(soak_mode.run(scheduler, cancel.child_token()));
         }
         tasks.spawn(sources.run(cancel.child_token()));
+        tasks.spawn(claude_cli.run(cancel.child_token()));
         tasks.spawn(forwarder::run_usage_events(
             app.clone(),
             snapshots,
