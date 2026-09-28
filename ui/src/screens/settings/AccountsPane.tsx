@@ -9,6 +9,7 @@ import { StatusChip } from "../../components/StatusBadge";
 import { useBridgeStatus } from "../../hooks/useBridgeStatus";
 import { detectCodex, isTauriRuntime, pickPath } from "../../ipc";
 import { ClaudeUsageApiGroup } from "./ClaudeUsageApiGroup";
+import { ClaudeCliGroup } from "./ClaudeCliGroup";
 
 function effectiveness(status: BridgeStatus | null): { readonly tone: "ok" | "warning" | "neutral"; readonly text: string } {
   if (status === null || !status.installed) return { tone: "neutral", text: "Disabled" };
@@ -44,9 +45,10 @@ export function AccountsPane({ settings, oauthAvailable, disabled, save, fixture
         <SettingsRow label="Real-time updates" description="Status line bridge" leading={<ServiceBadge provider="claude" size="compact" />}><StatusChip tone={bridgeLabel.tone}>{bridgeLabel.text}</StatusChip><button className="capsule-button ctl" disabled={disabled || bridge.busy} onClick={() => { void bridge.setInstalled(!(bridge.status?.installed ?? false)); }}>{bridge.status?.installed === true ? "Disable" : "Enable"}</button></SettingsRow>
         <SettingsRow label="Previous status line" description="Still runs after ours"><span className="settings-value mono">{bridge.status?.chained === true ? "Preserved and chained" : "None detected"}</span></SettingsRow>
         {bridge.status?.effective === "likelyOverridden" ? <div className="settings-warning"><Icon name="warning" size={15} /><span><strong>No updates received from Claude Code.</strong> A project or organization setting may override your status line, or your plan doesn’t report limits.</span></div> : null}
-        {bridge.status?.effective === "headlessOnly" ? <div className="settings-warning"><Icon name="warning" size={15} /><span><strong>Limits update only from Claude Code in a terminal.</strong> The Claude desktop app, IDE extensions, and SDK don’t run status lines. Use <span className="mono">claude</span> in a terminal to refresh limits.</span></div> : null}
+        {bridge.status?.effective === "headlessOnly" ? <div className="settings-warning"><Icon name="warning" size={15} /><span><strong>The status line needs a terminal session.</strong> Use Refresh with Claude Code below to check limits while you work in Desktop or an IDE.</span></div> : null}
         {bridge.error === null ? null : <div className="settings-error" role="status">{bridge.error}</div>}
       </SettingsGroup>
+      <ClaudeCliGroup disabled={disabled} />
       {oauthAvailable ? <ClaudeUsageApiGroup settings={settings} disabled={disabled} save={save} /> : null}
     </>
   );

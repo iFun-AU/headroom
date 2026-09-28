@@ -11,7 +11,7 @@ import { Countdown, UpdatedAgo } from "../components/Countdown";
 import { Icon, ServiceBadge, type IconName } from "../components/Icon";
 import { NeonBar } from "../components/NeonBar";
 import { UsageValue } from "../components/StatusBadge";
-import { isTauriRuntime, quitApp, refreshNow, showWindow } from "../ipc";
+import { commandErrorMessage, isTauriRuntime, quitApp, refreshNow, showWindow } from "../ipc";
 
 function findWindow(usage: ProviderUsage, kind: "session" | "weekly"): LimitWindow | undefined {
   return usage.windows.find((window) => window.kind.kind === kind);
@@ -84,7 +84,7 @@ export function Popover({ snapshot }: { readonly snapshot: UsageSnapshot | null 
     setRefreshing(true);
     setError(null);
     void refreshNow()
-      .catch(() => { setError("Couldn’t refresh usage."); })
+      .catch((cause: unknown) => { setError(commandErrorMessage(cause)); })
       .finally(() => { setRefreshing(false); });
   };
 

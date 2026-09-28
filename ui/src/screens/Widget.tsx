@@ -18,12 +18,12 @@ import { creditSummary, type CreditSummary } from "../credits";
 import { useSettings } from "../hooks/useSettings";
 import { expandFromWidget, hideWindow, isTauriRuntime } from "../ipc";
 
-type WindowKey = "session" | "weekly";
+type WindowKey = "session" | "weekly" | "fable";
 
 /** One widget row: a limit window to draw, or `undefined` for a dash. */
 interface WidgetRow {
   readonly key: WindowKey;
-  readonly label: "5h" | "wk";
+  readonly label: "5h" | "wk" | "Fable";
   readonly window: LimitWindow | undefined;
   /** The provider lacks the chosen window, so its other window stands in. */
   readonly substitute: boolean;
@@ -34,7 +34,7 @@ function usageWindow(usage: ProviderUsage, kind: WindowKey): LimitWindow | undef
 }
 
 function row(key: WindowKey, window: LimitWindow | undefined, substitute = false): WidgetRow {
-  return { key, label: key === "session" ? "5h" : "wk", window, substitute };
+  return { key, label: key === "session" ? "5h" : key === "weekly" ? "wk" : "Fable", window, substitute };
 }
 
 /**
@@ -43,7 +43,7 @@ function row(key: WindowKey, window: LimitWindow | undefined, substitute = false
  * plan has, flagged as a substitute. With both chosen, a plan without a 5-hour
  * limit drops that row rather than show an empty bar.
  */
-function widgetRows(usage: ProviderUsage, windows: WidgetWindows): readonly WidgetRow[] {
+function accountRows(usage: ProviderUsage, windows: WidgetWindows): readonly WidgetRow[] {
   const session = usageWindow(usage, "session");
   const weekly = usageWindow(usage, "weekly");
   if (windows === "Both") return session !== undefined || weekly === undefined ? [row("session", session), row("weekly", weekly)] : [row("weekly", weekly)];
@@ -54,14 +54,21 @@ function widgetRows(usage: ProviderUsage, windows: WidgetWindows): readonly Widg
   return [row(chosen, chosenWindow)];
 }
 
+/** Fable is an independent weekly allowance, shown alongside the chosen account limits. */
+function widgetRows(usage: ProviderUsage, windows: WidgetWindows): readonly WidgetRow[] {
+  const rows = accountRows(usage, windows);
+  const fable = usage.provider === "claude" ? usageWindow(usage, "fable") : undefined;
+  return fable === undefined ? rows : [...rows, row("fable", fable)];
+}
+
 /** Single-window rows and 5-hour rows get the tall bar and the prominent value. */
 function isPrimary(entry: WidgetRow, windows: WidgetWindows): boolean {
-  return windows !== "Both" || entry.key === "session";
+  return entry.key !== "fable" && (windows !== "Both" || entry.key === "session");
 }
 
 function ThinBar({ provider, window, height }: { readonly provider: Provider; readonly window: LimitWindow | undefined; readonly height: 3 | 4 | 6 }) {
   if (window === undefined) return <span className="widget-empty-bar" data-height={height} />;
-  return <NeonBar percent={window.used} accent={provider} label={window.kind.kind === "session" ? "5-hour limit" : "weekly limit"} resetsAt={window.resetsAt} resetPending={window.resetPending} height={height} showValue={false} reflect={false} />;
+  return <NeonBar percent={window.used} accent={provider} label={window.kind.kind === "session" ? "5-hour limit" : window.kind.kind === "fable" ? "Fable weekly limit" : "weekly limit"} resetsAt={window.resetsAt} resetPending={window.resetPending} height={height} showValue={false} reflect={false} />;
 }
 
 /** What one provider shows: limit rows plus, when enabled and available, its credits. */
@@ -94,17 +101,13 @@ function PillProvider({ usage, windows, credits }: { readonly usage: ProviderUsa
   return (
     <div className="widget-pill__provider" data-provider={usage.provider}>
       <WidgetLetter provider={usage.provider} />
-      <span className="widget-pill__bars">
-        {rows.map((entry) => <ThinBar key={entry.key} provider={usage.provider} window={entry.window} height={isPrimary(entry, windows) ? 6 : 4} />)}
-        {credit?.percent == null ? null : <CreditBar provider={usage.provider} credit={credit} height={rows.length === 0 ? 6 : 4} />}
-      </span>
-      <span className="widget-pill__values">
-        {rows.map((entry) => {
-          if (!isPrimary(entry, windows)) return <small key={entry.key} className="num">{entry.window === undefined ? "—" : `${String(entry.window.used)}%`}</small>;
-          return entry.window === undefined ? <small key={entry.key}>—</small> : <UsageValue key={entry.key} percent={entry.window.used} provider={usage.provider} compact />;
-        })}
-        {rows.map((entry) => entry.substitute && <small key={`${entry.key}-tag`} className="widget-window-tag">{entry.label}</small>)}
-        {credit === null ? null : <small className="widget-credit num" data-primary={rows.length === 0} title={credit.long}>{credit.short}</small>}
+      <span className="widget-pill__rows">
+        {rows.map((entry) => <span className="widget-pill__row" key={entry.key}>
+          <small>{entry.label}</small>
+          <ThinBar provider={usage.provider} window={entry.window} height={isPrimary(entry, windows) ? 6 : 4} />
+          {entry.window === undefined ? <span>—</span> : <UsageValue percent={entry.window.used} provider={usage.provider} compact />}
+        </span>)}
+        {credit === null ? null : <span className="widget-pill__credit num" title={credit.long}>{credit.short}</span>}
       </span>
     </div>
   );
@@ -133,7 +136,7 @@ function WidgetControls({ opacity, setOpacity, commitOpacity }: { readonly opaci
   );
 }
 
-/** Mini fits one window per provider, so "both" shows the 5-hour limit. */
+/** Mini keeps one account-wide limit per provider and adds the Fable allowance. */
 function MiniWidget({ snapshot, windows, credits }: { readonly snapshot: UsageSnapshot; readonly windows: WidgetWindows; readonly credits: CreditsDisplay }) {
   const single = windows === "Both" ? "FiveHour" : windows;
   const claude = providerDisplay(snapshot.claude, single, credits);
@@ -147,10 +150,15 @@ function MiniWidget({ snapshot, windows, credits }: { readonly snapshot: UsageSn
   const bar = (provider: Provider, { rows, credit }: ProviderDisplay) => rows.length === 0 && credit !== null
     ? <CreditBar provider={provider} credit={credit} height={3} />
     : <ThinBar provider={provider} window={rows[0]?.window} height={3} />;
+  const fable = claude.rows.find((entry) => entry.key === "fable")?.window;
   return (
     <>
-      <div className="widget-mini__bars">{bar("claude", claude)}{bar("codex", codex)}</div>
-      <div className="widget-mini__values"><strong className="num" data-provider="claude">C {value(claude)}</strong><span>·</span><strong className="num" data-provider="codex">X {value(codex)}</strong></div>
+      <div className="widget-mini__bars">
+        <div className="widget-mini__limit" data-provider="claude"><small>C</small>{bar("claude", claude)}</div>
+        {fable === undefined ? null : <div className="widget-mini__limit" data-provider="claude"><small>Fable</small><ThinBar provider="claude" window={fable} height={3} /></div>}
+        <div className="widget-mini__limit" data-provider="codex"><small>X</small>{bar("codex", codex)}</div>
+      </div>
+      <div className="widget-mini__values"><strong className="num" data-provider="claude">C {value(claude)}</strong>{fable === undefined ? null : <><span>·</span><strong className="num" data-provider="claude">Fable {String(fable.used)}%</strong></>}<span>·</span><strong className="num" data-provider="codex">X {value(codex)}</strong></div>
     </>
   );
 }

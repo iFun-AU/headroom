@@ -1,6 +1,6 @@
 # Headroom
 
-Headroom is a macOS menu-bar app that shows Claude and Codex session limits, weekly limits, and recent token activity. It provides a compact popover, a full dashboard, an optional floating widget, and threshold/reset notifications.
+Headroom is a macOS menu-bar app that shows Claude and Codex session limits, weekly limits, Claude's separate Fable allowance when reported, and recent token activity. It provides a compact popover, a full dashboard, an optional floating widget, and threshold/reset notifications.
 
 ![Headroom dashboard showing Claude and Codex limits](docs/screenshots/dashboard.png)
 
@@ -26,7 +26,7 @@ Prefer not to trust a prebuilt binary? [Build it yourself](#build-the-universal-
 ## What it reads
 
 - **Codex:** starts one owned `codex app-server` process for account limits and completed daily totals, and reads rollout JSONL files for near-real-time local activity and fallback limits. It never reads `.codex/auth.json`.
-- **Claude:** reads local Claude Code conversation logs for token activity. Plan-limit updates are available only when you explicitly enable the status-line bridge described below.
+- **Claude:** reads local Claude Code conversation logs for token activity. Plan-limit updates come from manual Claude Code refresh or the explicitly enabled status-line bridge described below.
 - **Claude usage API (optional, unofficial):** only in builds with the `claude-oauth` feature, and only after you turn on **Settings → Accounts → Claude usage API**. It then reads Claude Code's sign-in from the Keychain (read-only) and polls Anthropic's undocumented usage endpoint every few minutes. Default builds never read the credential or call the endpoint.
 
 Provider data, settings, and logs stay on the Mac. Codex authentication remains owned by Codex.
@@ -61,7 +61,7 @@ The equivalent manual steps:
 ```bash
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
 scripts/build-sidecar.sh universal-apple-darwin
-cargo tauri build --target universal-apple-darwin --features claude-oauth
+cargo tauri build --target universal-apple-darwin --bundles app --features claude-oauth
 codesign --force --deep -s - \
   "target/universal-apple-darwin/release/bundle/macos/Headroom.app"
 codesign --verify --deep --strict --verbose=2 \
@@ -106,15 +106,27 @@ Enabling **Settings → Accounts → Claude → Real-time updates** performs a c
 
 Claude Code hides most footer keyboard hints while any custom status line is configured. Claude supplies plan limits only for eligible plans and only after the first API response in a session.
 
-Claude Code runs status-line commands only in its interactive terminal UI (`claude` in a terminal). Sessions in the Claude desktop app, IDE extensions, `claude -p`, and the Agent SDK never invoke the bridge, so plan limits update only while you use Claude Code in a terminal. Limits are account-wide, so one terminal response also reflects usage from those other clients. When only such clients have been active, the app reports **Terminal Only** instead of **Likely Overridden**.
+Claude Code runs status-line commands only in its interactive terminal UI (`claude` in a terminal). Sessions in the Claude desktop app, IDE extensions, `claude -p`, and the Agent SDK never invoke the bridge. Limits are account-wide, so one terminal response also reflects usage from those other clients. When only such clients have been active, bridge diagnostics report **Terminal Only** instead of **Likely Overridden**. Bridge diagnostics do not replace the dashboard's usage display; manual refresh and the optional usage API work independently.
 
 To uninstall the bridge, choose **Disable** in the same Accounts pane before removing the app. Headroom re-reads the current settings, restores the exact prior `statusLine` value, and retains unrelated edits made after installation. If another tool or person has replaced the command, Headroom leaves the file untouched instead of overwriting that newer choice.
 
 Project-local, organization, managed, or server settings can take precedence over the user-level `~/.claude/settings.json`. In that case the bridge can be installed but not invoked; after continued Claude activity without bridge writes, the app reports **Likely Overridden** and shows a hint. Resolve the higher-precedence setting rather than repeatedly reinstalling the bridge.
 
+## Refresh Claude without keeping a terminal open
+
+Choose **Settings → Accounts → Refresh with Claude Code**. Headroom briefly runs Claude Code's `/usage` in a hidden terminal session, reads the session, all-model weekly, and Fable weekly limits when reported, and closes the process. It sends no model prompt and does not need the status-line bridge. With the optional usage API off, the dashboard, popover, and menu-bar **Refresh** actions use this path too.
+
+The dashboard and all three widget styles show Fable as a separate allowance. It is never estimated from the all-model weekly percentage. The bridge does not report Fable, so a later bridge update preserves a fresh Fable reading from manual refresh or the usage API for up to 15 minutes. Widget window preferences still select account limits; Fable is added whenever available, except in the explicit credits-only view.
+
+Claude Code must be installed and signed in once. This works when you normally use Claude Desktop or an IDE, but it cannot connect an account that has never been signed into Claude Code. Default sign-in and an explicit Claude configuration-directory override are kept distinct.
+
+Checks run only when requested, take at most 35 seconds after process startup, and use an empty app-owned directory with customizations and tools disabled. Refreshes are serialized with a 30-second retry floor and a five-minute cooldown after a rate-limit response. Failures keep the last valid measurements and their original timestamps. Opening the app or popover does not launch Claude.
+
+Implementation research and source links are in [docs/CLAUDE_USAGE_RESEARCH.md](docs/CLAUDE_USAGE_RESEARCH.md).
+
 ## Claude usage API
 
-Use this when you run Claude Code in the Claude desktop app or an IDE, where the status-line bridge never runs. It works only in builds made with `--features claude-oauth` (the build command above includes it); omit the flag to build without any Keychain or network access for Claude.
+Use this for periodic usage updates when you run Claude Code in the Claude desktop app or an IDE, where the status-line bridge never runs. It works only in builds made with `--features claude-oauth` (the build command above includes it); omit the flag to exclude Headroom's direct OAuth/Keychain integration. Manual refresh still runs Claude Code, which manages its own sign-in and usage request.
 
 - The endpoint is unofficial and may change or disappear without notice; the app then shows **Unsupported** for Claude and stops polling until you toggle the setting or restart.
 - The first poll shows a macOS prompt to allow access to `Claude Code-credentials`. Choose **Always Allow**. If you deny it, polling stops until you turn the setting off and on.
@@ -128,7 +140,7 @@ Use this when you run Claude Code in the Claude desktop app or an IDE, where the
 - Configure thresholds, reset alerts, launch-at-login, Dock visibility, source paths, and the floating widget in Settings.
 - Use **Settings → Diagnostics → Reveal Logs** for local diagnostics. Logs are stored in `~/Library/Logs/dev.headroom.app` and retained for seven days.
 
-When a source is unavailable, the app shows **Not Configured** or **Degraded** rather than inventing usage. Claude limit bars become stale when Claude Code has not produced a bridge update for 15 minutes; this is expected in v1.
+When a source is unavailable, the app shows a setup or error status rather than inventing usage. Claude limit bars become stale after 15 minutes without a fresh reading; use **Refresh** to check them again.
 
 ## Development checks
 

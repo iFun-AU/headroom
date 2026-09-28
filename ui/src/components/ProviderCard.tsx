@@ -2,8 +2,6 @@
  * @file ProviderCard.tsx
  * @description Provider usage card covering live, degraded, empty, stale, and limit states.
  */
-import type { ReactNode } from "react";
-import type { BridgeStatus } from "../bindings/BridgeStatus";
 import type { LimitWindow } from "../bindings/LimitWindow";
 import type { Provider } from "../bindings/Provider";
 import type { ProviderUsage } from "../bindings/ProviderUsage";
@@ -12,7 +10,7 @@ import { Countdown } from "./Countdown";
 import { Icon, ServiceBadge, type IconName } from "./Icon";
 import { NeonBar } from "./NeonBar";
 import { Sparkline } from "./Sparkline";
-import { ConnectionBadge, StatusChip, UsageValue, usageLevel } from "./StatusBadge";
+import { ConnectionBadge, UsageValue, usageLevel } from "./StatusBadge";
 
 export type ProviderCardAction = "configure" | "detect" | "details" | "pickPath" | "retry" | "settings";
 
@@ -24,7 +22,6 @@ export interface ProviderCardProps {
   readonly onAction?: (action: ProviderCardAction) => void;
   readonly className?: string;
   readonly showThresholdNotice?: boolean;
-  readonly bridgeStatus?: BridgeStatus | null;
 }
 
 function providerName(provider: Provider): string {
@@ -37,14 +34,14 @@ function planLabel(provider: Provider, plan: string | null): string | null {
   return plan.startsWith("ChatGPT ") ? plan : `ChatGPT ${plan}`;
 }
 
-function kind(window: LimitWindow): "session" | "weekly" | "other" {
+function kind(window: LimitWindow): LimitWindow["kind"]["kind"] {
   return window.kind.kind;
 }
 
 function limitLabel(window: LimitWindow): string {
   if (kind(window) === "session") return "5-hour limit";
   if (kind(window) === "weekly") return "weekly limit";
-  return "provider limit";
+  return kind(window) === "fable" ? "Fable weekly limit" : "provider limit";
 }
 
 function actionButton(label: string, primary: boolean, onClick: (() => void) | undefined) {
@@ -85,7 +82,7 @@ function LoadingCard({ provider, className }: { readonly provider: Provider; rea
   );
 }
 
-function ProviderHeader({ usage, onDetails, statusOverride }: { readonly usage: ProviderUsage; readonly onDetails: (() => void) | undefined; readonly statusOverride?: ReactNode }) {
+function ProviderHeader({ usage, onDetails }: { readonly usage: ProviderUsage; readonly onDetails: (() => void) | undefined }) {
   const dimmed = usage.status.state === "notConfigured";
   const subtitle = usage.status.state === "notConfigured"
     ? usage.provider === "claude" ? "Not set up" : "Not found"
@@ -97,7 +94,7 @@ function ProviderHeader({ usage, onDetails, statusOverride }: { readonly usage: 
         <strong>{providerName(usage.provider)}</strong>
         {subtitle === null ? null : <small>{subtitle}</small>}
       </span>
-      {statusOverride ?? <ConnectionBadge status={usage.status} lastUpdated={usage.lastUpdated} />}
+      <ConnectionBadge status={usage.status} lastUpdated={usage.lastUpdated} />
       {onDetails === undefined ? null : (
         <button className="icon-button ctl" aria-label={`Open ${providerName(usage.provider)} details`} onClick={onDetails}>
           <Icon name="chevron" size={14} />
@@ -112,7 +109,7 @@ function UsageBlock({ window, provider, dimmed }: { readonly window: LimitWindow
   return (
     <div className="usage-block">
       <div className="usage-block__heading">
-        <span><strong>{isSession ? "Session" : kind(window) === "weekly" ? "Weekly" : "Other"}</strong><small>{isSession ? "5-hour window" : kind(window) === "weekly" ? "7-day window" : "Provider window"}</small></span>
+        <span><strong>{isSession ? "Session" : kind(window) === "weekly" ? "Weekly" : kind(window) === "fable" ? "Fable" : "Other"}</strong><small>{isSession ? "5-hour window" : kind(window) === "weekly" || kind(window) === "fable" ? "7-day window" : "Provider window"}</small></span>
         <UsageValue percent={window.used} provider={provider} dimmed={dimmed} />
       </div>
       <NeonBar
@@ -147,46 +144,11 @@ function CreditsBlock({ usage, dimmed }: { readonly usage: ProviderUsage; readon
   );
 }
 
-type BridgeProblem = "likelyOverridden" | "headlessOnly";
-
-/** Chip and explanation for each bridge state in which Claude limits stop updating. */
-const BRIDGE_PROBLEM_COPY: Readonly<Record<BridgeProblem, { readonly chip: string; readonly message: string }>> = {
-  likelyOverridden: {
-    chip: "No updates",
-    message: "No updates received from Claude Code. A project or organization setting may override your status line, or your plan doesn’t report limits.",
-  },
-  headlessOnly: {
-    chip: "Terminal only",
-    message: "Claude Code is running only in the Claude desktop app, an IDE, or the SDK, which don’t run status lines. Limits update while you use claude in a terminal.",
-  },
-};
-
-function bridgeProblem(provider: Provider, status: BridgeStatus | null): BridgeProblem | null {
-  if (provider !== "claude" || status === null) return null;
-  return status.effective === "likelyOverridden" || status.effective === "headlessOnly" ? status.effective : null;
-}
-
-function BridgeNotice({ problem, usage, onAction }: { readonly problem: BridgeProblem; readonly usage: ProviderUsage; readonly onAction: ((action: ProviderCardAction) => void) | undefined }) {
-  const session = usage.windows.find((window) => kind(window) === "session");
-  const copy = BRIDGE_PROBLEM_COPY[problem];
-  return (
-    <>
-      <ProviderHeader usage={usage} onDetails={undefined} statusOverride={<StatusChip tone="warning">{copy.chip}</StatusChip>} />
-      <div className="bridge-warning" role="status">
-        <Icon name="warning" size={15} />
-        <span>{copy.message}</span>
-      </div>
-      {session === undefined ? null : <UsageBlock window={session} provider="claude" dimmed />}
-      {actionButton("Open Settings", false, onAction === undefined ? undefined : () => { onAction("settings"); })}
-    </>
-  );
-}
-
 function StatusNotice({ window }: { readonly window: LimitWindow }) {
   const level = usageLevel(window.used);
   if (level === "normal" || level === "limit") return null;
   const critical = level === "critical";
-  const windowName = kind(window) === "session" ? "session" : kind(window) === "weekly" ? "weekly" : "provider";
+  const windowName = kind(window) === "session" ? "session" : kind(window) === "weekly" ? "weekly" : kind(window) === "fable" ? "Fable" : "provider";
   return (
     <div className="provider-notice" data-level={level}>
       <Icon name={critical ? "critical" : "warning"} size={15} />
@@ -251,9 +213,8 @@ function StaticState({ usage, onAction }: { readonly usage: ProviderUsage; reado
   }
 }
 
-export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAction, className, showThresholdNotice = false, bridgeStatus = null }: ProviderCardProps) {
+export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAction, className, showThresholdNotice = false }: ProviderCardProps) {
   if (usage === null) return <LoadingCard provider={provider} className={className} />;
-  const problem = bridgeProblem(provider, bridgeStatus);
   const staticState = <StaticState usage={usage} onAction={onAction} />;
   const disconnected = usage.status.state === "notConfigured" || usage.status.state === "authExpired" || usage.status.state === "unsupported" || usage.status.state === "error";
   const session = usage.windows.find((window) => kind(window) === "session");
@@ -263,15 +224,12 @@ export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAct
   const details = onAction === undefined ? undefined : () => { onAction("details"); };
 
   return (
-    <section className={`provider-card card ${className ?? ""}`} data-status={problem ?? usage.status.state}>
-      {problem === null ? null : <BridgeNotice problem={problem} usage={usage} onAction={onAction} />}
-      {problem !== null ? null : (
-        <>
+    <section className={`provider-card card ${className ?? ""}`} data-status={usage.status.state}>
       <ProviderHeader usage={usage} onDetails={disconnected ? undefined : details} />
       {disconnected ? staticState : null}
       {!disconnected && usage.status.state === "degraded" ? <div className="provider-muted"><Icon name="info" size={14} />{usage.status.reason}</div> : null}
       {!disconnected && session === undefined ? <div className="provider-muted"><Icon name="info" size={14} />No 5-hour limit on this plan</div> : null}
-      {!disconnected && session?.used === 100 ? <><LimitReached session={session} weekly={weekly} provider={provider} /><CreditsBlock usage={usage} dimmed={stale} /></> : null}
+      {!disconnected && session?.used === 100 ? <><LimitReached session={session} weekly={weekly} provider={provider} />{usage.windows.filter((window) => kind(window) === "fable").map((window) => <UsageBlock key="fable" window={window} provider={provider} dimmed={stale} />)}<CreditsBlock usage={usage} dimmed={stale} /></> : null}
       {!disconnected && session?.used !== 100 ? (
         <>
           {showThresholdNotice && highestWindow !== undefined ? <StatusNotice window={highestWindow} /> : null}
@@ -285,8 +243,6 @@ export function ProviderCard({ usage, provider, sparkline = [], peakLabel, onAct
           )}
         </>
       ) : null}
-        </>
-      )}
     </section>
   );
 }

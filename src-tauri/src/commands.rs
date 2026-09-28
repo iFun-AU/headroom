@@ -14,10 +14,12 @@ use crate::{
 };
 
 pub(crate) mod bridge;
+pub(crate) mod claude_cli;
 mod support;
 mod types;
 
 pub use bridge::{claude_bridge_status, install_claude_bridge, uninstall_claude_bridge};
+pub use claude_cli::refresh_claude_cli;
 use support::{codex_version, internal, sync_autostart, window};
 pub use types::{
     BridgeStatus, CodexDetection, CommandError, PathKind, PathPurpose, Route, WindowTarget,
@@ -107,6 +109,7 @@ pub async fn set_settings(
             return Err(internal("Could not save settings", &error));
         }
     };
+    claude_cli::clear_changed_profile(&state, &prior, &saved.settings).await?;
     apply_runtime_settings(&state, &saved.settings).await?;
     Ok(saved)
 }
@@ -137,6 +140,7 @@ pub async fn reset_settings(
             return Err(internal("Could not reset settings", &error));
         }
     };
+    claude_cli::clear_changed_profile(&state, &prior, &saved.settings).await?;
     apply_runtime_settings(&state, &saved.settings).await?;
     Ok(saved)
 }
@@ -314,6 +318,11 @@ pub(crate) async fn refresh_now_impl(state: &RuntimeState) -> Result<(), Command
         && let Err(error) = control.retry()
     {
         warn!(%error, "could not queue Codex app-server retry");
+    }
+    // Never run a CLI probe on automatic ticks or UI visibility. Avoid a second
+    // request to Claude's usage backend when the opt-in OAuth poller is enabled.
+    if !cfg!(feature = "claude-oauth") || !state.settings.snapshot().settings.claude_oauth_enabled {
+        claude_cli::refresh(state).await?;
     }
     Ok(())
 }

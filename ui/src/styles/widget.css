@@ -19,25 +19,25 @@
 
 .widget-root[data-variant="Pill"] {
   border-radius: 36px;
-  height: 72px;
+  height: 80px;
   padding: 0 14px;
-  width: 280px;
+  width: 320px;
 }
 
 .widget-root[data-variant="Stack"] {
   border-radius: 24px;
-  height: 180px;
+  height: 220px;
   padding: 14px;
-  width: 160px;
+  width: 180px;
 }
 
 .widget-root[data-variant="Mini"] {
   border-radius: 12px;
   flex-direction: column;
   gap: 5px;
-  height: 24px;
+  height: 32px;
   padding: 0 12px;
-  width: 200px;
+  width: 280px;
 }
 
 .widget-root[data-variant="Loading"] {
@@ -77,47 +77,40 @@
   gap: 8px;
 }
 
-.widget-pill__bars {
+.widget-pill__rows {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  width: 52px;
+  gap: 4px;
+  width: 112px;
 }
 
-.widget-pill__values {
-  align-items: flex-end;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  width: 32px;
+.widget-pill__row {
+  align-items: center;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 28px 44px 32px;
+  min-height: 13px;
 }
 
-.widget-pill__values .usage-value {
-  font-size: 12px;
-}
-
-.widget-pill__values .usage-value .icon {
-  height: 10px;
-  width: 10px;
-}
-
-.widget-pill__values > small {
-  color: var(--provider-text);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-/* Credits: an amount beside or in place of the limits. */
-.widget-pill__values > .widget-credit {
+.widget-pill__row > small {
   color: var(--label2);
-  font-weight: 500;
-  white-space: nowrap;
+  font-size: 9px;
 }
 
-.widget-pill__values > .widget-credit[data-primary="true"] {
-  color: var(--provider-text);
-  font-size: 12px;
-  font-weight: 600;
+.widget-pill__row .usage-value {
+  font-size: 11px;
+  justify-self: end;
+}
+
+.widget-pill__row .usage-value .icon {
+  display: none;
+}
+
+.widget-pill__credit {
+  color: var(--label2);
+  font-size: 10px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .widget-stack__row > .widget-credit {
@@ -128,19 +121,14 @@
   white-space: nowrap;
 }
 
-/* Three rows (both limits plus credits) only fit the fixed-size Stack when tighter. */
-.widget-stack__provider[data-rows="3"] {
+/* Additional model and credit rows use a tighter gap. */
+.widget-stack__provider[data-rows="3"],
+.widget-stack__provider[data-rows="4"] {
   gap: 4px;
 }
 
 .widget-credit-spacer {
   display: block;
-}
-
-/* Names a stand-in window when the plan lacks the chosen one. */
-.widget-pill__values > .widget-window-tag {
-  color: var(--label2);
-  font-weight: 500;
 }
 
 .widget-divider {
@@ -174,7 +162,7 @@
   align-items: center;
   display: grid;
   gap: 6px;
-  grid-template-columns: 16px 72px 38px;
+  grid-template-columns: 30px minmax(0, 1fr) 44px;
 }
 
 .widget-stack__row > small {
@@ -251,12 +239,25 @@
   display: flex;
 }
 
-.widget-mini__bars,
-.widget-mini__values {
+.widget-mini__bars {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
   width: 100%;
+}
+
+.widget-mini__limit {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  grid-template-columns: 25px minmax(0, 1fr);
+  min-height: 8px;
+}
+
+.widget-mini__limit > small {
+  color: var(--label2);
+  font-size: 8px;
+  line-height: 8px;
 }
 
 .widget-mini__values {
@@ -266,6 +267,7 @@
   font-size: 11px;
   gap: 8px;
   justify-content: center;
+  width: 100%;
 }
 
 .widget-mini__values [data-provider="claude"] { color: var(--claude-text); }

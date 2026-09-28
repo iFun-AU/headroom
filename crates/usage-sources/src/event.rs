@@ -3,6 +3,13 @@ use usage_core::{ConnectionStatus, DailyBuckets, Provider, Reading, SourceKind, 
 /// A normalized event emitted by an asynchronous provider source.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SourceEvent {
+    /// Drops measurements when the source's configured profile changes.
+    ClearSource {
+        /// Provider whose source is being replaced.
+        provider: Provider,
+        /// Exact source whose prior profile must no longer contribute readings.
+        source: SourceKind,
+    },
     /// A full or sparse provider limit reading.
     Reading(Reading),
     /// One or more local token-history events.

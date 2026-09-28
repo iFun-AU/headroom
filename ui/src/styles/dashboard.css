@@ -155,6 +155,20 @@
   gap: 14px;
 }
 
+.detail-header[data-has-fable="true"] {
+  flex-basis: auto;
+  flex-wrap: wrap;
+}
+
+.detail-header[data-has-fable="true"] .detail-header__limits {
+  flex-basis: 100%;
+}
+
+.detail-header[data-has-fable="true"] .detail-limit {
+  flex: 1;
+  min-width: 0;
+}
+
 .detail-limit {
   display: flex;
   flex-direction: column;

@@ -44,6 +44,7 @@ pub fn run() -> tauri::Result<()> {
             commands::get_snapshot,
             commands::get_history,
             commands::refresh_now,
+            commands::claude_cli::refresh_claude_cli,
             commands::get_settings,
             commands::set_settings,
             commands::reset_settings,

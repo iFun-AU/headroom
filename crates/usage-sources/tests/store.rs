@@ -44,6 +44,68 @@ fn unix_now() -> UnixSeconds {
 }
 
 #[tokio::test]
+async fn clearing_a_profile_removes_only_that_sources_cached_reading() {
+    let now = unix_now();
+    let (events, mut handle, actor) = UsageStore::channel(vec![75]);
+    let cancel = CancellationToken::new();
+    let task = tokio::spawn(actor.run(cancel.clone()));
+    events
+        .send(SourceEvent::Reading(reading(20.0, now)))
+        .await
+        .expect("bridge reading");
+    let mut cli = reading(45.0, UnixSeconds(now.0 + 1));
+    cli.source = SourceKind::ClaudeCli;
+    cli.windows[0].source = SourceKind::ClaudeCli;
+    events
+        .send(SourceEvent::Reading(cli))
+        .await
+        .expect("CLI reading");
+    timeout(Duration::from_secs(1), async {
+        loop {
+            handle.snapshot.changed().await.expect("snapshot");
+            if handle
+                .snapshot
+                .borrow()
+                .claude
+                .windows
+                .first()
+                .is_some_and(|window| window.source == SourceKind::ClaudeCli)
+            {
+                break;
+            }
+        }
+    })
+    .await
+    .expect("CLI reading should publish");
+    events
+        .send(SourceEvent::ClearSource {
+            provider: Provider::Claude,
+            source: SourceKind::ClaudeCli,
+        })
+        .await
+        .expect("clear profile");
+    timeout(Duration::from_secs(1), async {
+        loop {
+            handle.snapshot.changed().await.expect("snapshot");
+            if handle
+                .snapshot
+                .borrow()
+                .claude
+                .windows
+                .first()
+                .is_some_and(|window| window.source == SourceKind::ClaudeStatusline)
+            {
+                break;
+            }
+        }
+    })
+    .await
+    .expect("bridge reading should remain");
+    cancel.cancel();
+    task.await.expect("store should stop");
+}
+
+#[tokio::test]
 async fn readings_history_and_alerts_flow_through_the_actor() {
     assert_eq!(SOURCE_EVENT_CAPACITY, 256);
     assert_eq!(ALERT_CAPACITY, 32);

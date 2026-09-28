@@ -26,6 +26,8 @@ pub enum WindowKind {
     Session,
     /// Approximately seven days (9,000 through 11,000 minutes).
     Weekly,
+    /// Claude's separately reported weekly allowance for Fable models.
+    Fable,
     /// An unrecognized duration, retained so no provider data is silently dropped.
     Other {
         /// The reported duration in minutes.
@@ -107,6 +109,8 @@ pub enum SourceKind {
     CodexRollout,
     /// Claude Code's status-line integration.
     ClaudeStatusline,
+    /// A user-requested Claude Code `/usage` terminal probe.
+    ClaudeCli,
     /// Claude's optional OAuth usage endpoint.
     ClaudeOAuth,
     /// Claude Code's local conversation logs.
@@ -120,7 +124,7 @@ impl SourceKind {
     #[must_use]
     pub const fn limit_priority(self) -> u8 {
         match self {
-            Self::CodexAppServer | Self::ClaudeStatusline => 0,
+            Self::CodexAppServer | Self::ClaudeStatusline | Self::ClaudeCli => 0,
             Self::CodexRollout | Self::ClaudeOAuth => 1,
             Self::ClaudeLocalLogs => u8::MAX,
         }
