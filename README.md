@@ -2,11 +2,11 @@
 
 Headroom is a macOS menu-bar app that shows Claude and Codex session limits, weekly limits, Claude's separate Fable allowance when reported, and recent token activity. It provides a compact popover, a full dashboard, an optional floating widget, and threshold/reset notifications.
 
-![Headroom dashboard showing Claude and Codex limits](docs/screenshots/dashboard.png)
+![Headroom dashboard showing Claude session, weekly, and Fable usage alongside Codex weekly usage](docs/screenshots/dashboard.png)
 
 | Menu bar | Floating widget |
 | --- | --- |
-| ![Stacked Claude and Codex weekly bars in the menu bar](docs/screenshots/menu-bar.png) | ![Floating widget with Claude 5-hour and weekly, and Codex weekly limits](docs/screenshots/widget.png) |
+| ![Stacked Claude and Codex weekly bars in the menu bar](docs/screenshots/menu-bar.png) | ![Floating widget showing Claude session, weekly, and Fable usage alongside Codex weekly usage](docs/screenshots/widget.png) |
 
 ## Download
 
